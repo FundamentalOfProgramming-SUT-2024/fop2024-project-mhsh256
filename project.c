@@ -8,6 +8,8 @@
 
 
 int num_users;
+int color_of_main_character = 0; // 0:red  , 1:blue , 2:white
+int difficulty = 1; // 0: easy   , 1:medium , 2:hard
 char user_names[100][20];
 char passwords [100][100];
 char emails [100][100];
@@ -42,6 +44,9 @@ int main(){
     mvprintw(15 ,40, "press any key to continue");
     getch();
     make_or_load_user();
+    clear();
+    mvprintw(1,3,"salam zendegi");
+    getch();
     endwin();
     return 0;
 }
@@ -525,7 +530,7 @@ void game_menu(){
         int key;
         attron(A_BOLD);
         mvprintw(1,1,"GAME MENU");
-        mvprintw(3,1 , "%d" , which);
+        // mvprintw(3,1 , "%d" , which);
         attroff(A_BOLD);
         if (which == 0)
         {
@@ -610,15 +615,125 @@ void game_menu(){
     } 
 }
 
+//---------------------------------------settings
+void settings(){
+    int which = 0;
+    while (1) // difficuly settings
+    {
+        int key;
+        clear();
+        attron(A_BOLD);
+        mvprintw(1,1,"SETTINGS");
+        attroff(A_BOLD);
+        mvprintw(6,1,"difficulty level: ");
+        if (which == 0)
+        {
+            attron(COLOR_PAIR(1));
+            mvprintw(7,3,"easy(i am nooooob)");
+            attroff(COLOR_PAIR(1));
+            mvprintw(8,3,"medium");
+            mvprintw(9,3,"hard(my recommendation: don't choose this)");
+        }else if (which == 1)
+        {
+            mvprintw(7,3,"easy(i am nooooob)");
+            attron(COLOR_PAIR(1));
+            mvprintw(8,3,"medium");
+            attroff(COLOR_PAIR(1));
+            mvprintw(9,3,"hard(my recommendation: don't choose this)");
+        }else if (which == 2)
+        {
+            mvprintw(7,3,"easy(i am nooooob)");
+            mvprintw(8,3,"medium");
+            attron(COLOR_PAIR(1));
+            mvprintw(9,3,"hard(my recommendation: don't choose this)");
+            attroff(COLOR_PAIR(1));
+        }
+        key = getch();
+        // mvprintw(14,1,"%c" , key);
+        if (key == KEY_UP && which > 0)
+        {
+            which--;
 
+        }else if (key == KEY_DOWN &&  which < 2)
+        {
+            which ++;
+            // mvprintw(15,1,"salam");
+        }else if (key == '\n')
+        {
+            break;
+        }
+        refresh();
+    }
+    difficulty = which;
+    which = 0;
+    while (1) // main character settings
+    {
+        clear();
+        int key;
+        attron(A_BOLD);
+        mvprintw(1,1,"SETTINGS");
+        attroff(A_BOLD);
+        if (difficulty == 0)
+        {
+            mvprintw(6,1,"difficulty level: easy");
+        }else if (difficulty == 1)
+        {
+            mvprintw(6,1,"difficulty level: medium");
+        }else if (difficulty == 2)
+        {
+            mvprintw(6,1,"difficulty level: hard");
+        }
+        mvprintw(7,1,"main character color: ");
+        if (which == 0)
+        {
+            attron(COLOR_PAIR(1));
+            mvprintw(8,3,"red");
+            attroff(COLOR_PAIR(1));
+            mvprintw(9,3,"blue");
+            mvprintw(10,3,"white");
+        }else if (which == 1)
+        {
+            mvprintw(8,3,"red");
+            attron(COLOR_PAIR(1));
+            mvprintw(9,3,"blue");
+            attroff(COLOR_PAIR(1));
+            mvprintw(10,3,"white");
+        }else if (which == 2)
+        {
+            mvprintw(8,3,"red");
+            mvprintw(9,3,"blue");
+            attron(COLOR_PAIR(1));
+            mvprintw(10,3,"white");
+            attroff(COLOR_PAIR(1));
+        }
+        key = getch();
+        // mvprintw(14,1,"%c" , key);
+        if (key == KEY_UP && which > 0)
+        {
+            which--;
+
+        }else if (key == KEY_DOWN &&  which < 2)
+        {
+            which ++;
+            // mvprintw(15,1,"salam");
+        }else if (key == '\n')
+        {
+            break;
+        }
+    }
+    color_of_main_character = which;
+    attron(COLOR_PAIR(3));
+    mvprintw(15,1,"settings applied successfully");
+    attroff(COLOR_PAIR(3));
+    getch();
+}
 
 //------------------------------- not developed yet
 void resume_game(){
     printw("7");
 }
-void settings(){
-    printw("6");
-}
+
+
 void profile_menu(){
     printw("3");
 }
