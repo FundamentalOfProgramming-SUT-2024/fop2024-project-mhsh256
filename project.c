@@ -7,12 +7,17 @@
 #include<ctype.h>
 
 
+int num_users;
 char user_names[100][20];
+char passwords [100][100];
+char emails [100][100];
 FILE *fptr;
 char user_name[50];
 char password [31];
 char email[50];
 
+
+void get_informations();
 void pair_colors();
 int make_or_load_user();
 void which_page_to_go(); // connect made_or_load_user to next pages
@@ -25,6 +30,7 @@ void Hall_of_Heroes();
 
 
 int main(){
+    get_informations();
     srand(time(NULL));
     initscr();
     start_color();
@@ -32,17 +38,67 @@ int main(){
     keypad(stdscr , TRUE);
     mvprintw(15 ,40, "press any key to continue");
     getch();
-    which_page_to_go(make_or_load_user());
+    make_or_load_user();
     endwin();
     return 0;
 }
-
+//----------------------- painting
 void pair_colors(){
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
+    init_pair(3,COLOR_BLACK,COLOR_GREEN); // to congratulate
+}
+
+//-----------------------------------get informations
+void get_informations(){
+    num_users = 0;
+    fptr = fopen("user_names.txt","r");
+    while (fgets(user_names[num_users], 20, fptr)) {
+        user_names[num_users][strcspn(user_names[num_users], "\n")] = '\0';
+        size_t len = strlen(user_names[num_users]);
+        // user_names[num_users][len - 1] = '\0';
+        num_users++;
+    }
+    fclose(fptr);
+    fptr = fopen("passwords.txt","r");
+    int num_pass = 0;
+    while (fgets(passwords[num_pass], 20, fptr)) {
+        passwords[num_pass][strcspn(passwords[num_pass], "\n")] = '\0';
+        size_t len = strlen(passwords[num_pass]);
+        // user_names[num_users][len - 1] = '\0';
+        num_pass++;
+    }
+    fclose(fptr);
+    fptr = fopen("emails.txt","r");
+    num_pass = 0;
+    while (fgets(emails[num_pass], 20, fptr)) {
+        emails[num_pass][strcspn(emails[num_pass], "\n")] = '\0';
+        size_t len = strlen(emails[num_pass]);
+        // user_names[num_users][len - 1] = '\0';
+        num_pass++;
+    }
+    fclose(fptr);
 }
 
 //---------------------------------first page
+void which_page_to_go(int n){
+    if (n == 0)
+    {
+        create_user();
+    }else if (n == 1)
+    {
+        login();
+    }else if (n == 2)
+    {
+        game_menu();
+    }else if (n == 3)
+    {
+        profile_menu();
+    }else if (n == 4)
+    {
+        Hall_of_Heroes();
+    } 
+}
 int make_or_load_user(){
     clear();
     noecho();
@@ -121,26 +177,9 @@ int make_or_load_user(){
         }
     }
     echo();
-    return which;
+    which_page_to_go(which);
 }
-void which_page_to_go(int n){
-    if (n == 0)
-    {
-        create_user();
-    }else if (n == 1)
-    {
-        login();
-    }else if (n == 2)
-    {
-        game_menu();
-    }else if (n == 3)
-    {
-        profile_menu();
-    }else if (n == 4)
-    {
-        Hall_of_Heroes();
-    } 
-}
+
 // ---------------------------------------- create user
 char random_char(const char *charset, int size) {
     return charset[rand() % size];
@@ -182,15 +221,7 @@ int is_email_valid(char *email) {
     return 1;
 }
 void create_user(){
-    int num_users = 0;
-    fptr = fopen("user_names.txt","r");
-    while (fgets(user_names[num_users], 20, fptr)) {
-        user_names[num_users][strcspn(user_names[num_users], "\n")] = '\0';
-        size_t len = strlen(user_names[num_users]);
-        // user_names[num_users][len - 1] = '\0';
-        num_users++;
-    }
-    fclose(fptr);
+    
     
     while (1) // to input user name
     {
@@ -388,9 +419,11 @@ void create_user(){
     fptr = fopen("emails.txt" , "a");
     fprintf(fptr, "%s\n" , email);
     fclose(fptr);
-
-
-    login();// go to the next page
+    attron(COLOR_PAIR(3));
+    mvprintw(15,1,"user created successfully!");
+    attroff(COLOR_PAIR(3));
+    getch();
+    make_or_load_user();// go to the next page
     
     
     // getch();
