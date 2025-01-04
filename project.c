@@ -26,6 +26,9 @@ void login();
 void game_menu();
 void profile_menu();
 void Hall_of_Heroes();
+void resume_game();
+void settings();
+
 
 
 
@@ -513,9 +516,108 @@ void login(){
     game_menu();
 }
 
-
+// ------------------------------------ game menu
 void game_menu(){
-    printw("2");
+    int which = 0;
+    while (1)
+    {
+        clear();
+        int key;
+        attron(A_BOLD);
+        mvprintw(1,1,"GAME MENU");
+        mvprintw(3,1 , "%d" , which);
+        attroff(A_BOLD);
+        if (which == 0)
+        {
+            attron(COLOR_PAIR(1));
+            mvprintw(6,1,"create new game");
+            attroff(COLOR_PAIR(1));
+            mvprintw(7,1,"resume geme");
+            mvprintw(8,1,"Hall of Heroes");
+            mvprintw(9,1,"settings");
+            mvprintw(10,1,"profile menu");
+        }else if (which == 1)
+        {
+            mvprintw(6,1,"create new game");
+            attron(COLOR_PAIR(1));
+            mvprintw(7,1,"resume geme");
+            attroff(COLOR_PAIR(1));
+            mvprintw(8,1,"Hall of Heroes");
+            mvprintw(9,1,"settings");
+            mvprintw(10,1,"profile menu");
+        }else if (which == 2)
+        {
+            mvprintw(6,1,"create new game");
+            mvprintw(7,1,"resume geme");
+            attron(COLOR_PAIR(1));
+            mvprintw(8,1,"Hall of Heroes");
+            attroff(COLOR_PAIR(1));
+            mvprintw(9,1,"settings");
+            mvprintw(10,1,"profile menu");
+        }else if (which == 3)
+        {
+            mvprintw(6,1,"create new game");
+            mvprintw(7,1,"resume geme");
+            mvprintw(8,1,"Hall of Heroes");
+            attron(COLOR_PAIR(1));
+            mvprintw(9,1,"settings");
+            attroff(COLOR_PAIR(1));
+            mvprintw(10,1,"profile menu");
+        }else if (which == 4)
+        {
+            mvprintw(6,1,"create new game");
+            mvprintw(7,1,"resume geme");
+            mvprintw(8,1,"Hall of Heroes");
+            mvprintw(9,1,"settings");
+            attron(COLOR_PAIR(1));
+            mvprintw(10,1,"profile menu");
+            attroff(COLOR_PAIR(1));
+        }
+        key = getch();
+        // mvprintw(14,1,"%c" , key);
+        if (key == KEY_UP && which > 0)
+        {
+            which--;
+
+        }else if (key == KEY_DOWN &&  which < 4)
+        {
+            which ++;
+            // mvprintw(15,1,"salam");
+        }else if (key == '\n')
+        {
+            break;
+        }
+        // getch();
+        
+        refresh();
+        
+    }
+    if (which == 0)
+    {
+        resume_game();
+    }else if (which == 1)
+    {
+        resume_game();
+    }else if (which == 2)
+    {
+        Hall_of_Heroes();
+    }else if (which == 3)
+    {
+        settings();
+    }else if (which == 4)
+    {
+        profile_menu();
+    } 
+}
+
+
+
+//------------------------------- not developed yet
+void resume_game(){
+    printw("7");
+}
+void settings(){
+    printw("6");
 }
 void profile_menu(){
     printw("3");
