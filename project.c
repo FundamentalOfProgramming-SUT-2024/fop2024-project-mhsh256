@@ -428,9 +428,92 @@ void create_user(){
     
     // getch();
 }
+
+
+
+//-------------------------------------login
 void login(){
-    printw("1");
+    int which_user;
+    while (1) // to enter user name
+    {
+        clear();
+        attron(A_BOLD);
+        mvprintw(1,1,"LOGIN PAGE!!!");
+        attroff(A_BOLD);
+        mvprintw(6,1,"enter your user name(if you have not enter Y): ");
+        getstr(user_name);
+        if (strcmp(user_name,"Y") == 0)
+        {
+            create_user();
+        }
+        int is_user_name_exist = -1;
+        
+        for (int i = 0; i < num_users; i++)
+        {
+            if (strcmp(user_name,user_names[i]) == 0)
+            {
+                is_user_name_exist = i;
+                break;
+            }
+        }
+        which_user = is_user_name_exist;
+        if (is_user_name_exist == -1)
+        {
+            attron(COLOR_PAIR(2));
+            mvprintw(7,1,"user name is not exist");
+            attroff(COLOR_PAIR(2));
+            refresh();
+            getch();
+        }else{
+            break;
+        }
+    }
+    while (1) // enter password
+    {
+        clear();
+        attron(A_BOLD);
+        mvprintw(1,1,"LOGIN PAGE!!!");
+        attroff(A_BOLD);
+        mvprintw(6,1,"enter your user name: %s" , user_name);
+        mvprintw(7,1,"enter your password(if you don't remember enter Y): ");
+        getstr(password);
+        if (strcmp(password , "Y") == 0)
+        {
+            mvprintw(8,1,"enter you email: ");
+            getstr(email);
+            if (strcmp(email , emails[which_user]) == 0)
+            {
+                attron(COLOR_PAIR(3));
+                mvprintw(9,1,"it is your password: %s" , passwords[which_user]);
+                attroff(COLOR_PAIR(3));
+                getch();
+            }else{
+                attron(COLOR_PAIR(2));
+                mvprintw(9,1,"it is not your email!");
+                attroff(COLOR_PAIR(2));
+                getch();
+            }
+        }else{
+            if (strcmp(password,passwords[which_user]) == 0)
+            {
+                attron(COLOR_PAIR(3));
+                mvprintw(8,1,"welcome to rogue(M.H.Shirazi version)");
+                attroff(COLOR_PAIR(3));
+                getch();
+                break;
+            }else
+            {
+                attron(COLOR_PAIR(2));
+                mvprintw(8,1,"this is not your password!");
+                attroff(COLOR_PAIR(2));
+                getch();
+            } 
+        } 
+    }
+    game_menu();
 }
+
+
 void game_menu(){
     printw("2");
 }
