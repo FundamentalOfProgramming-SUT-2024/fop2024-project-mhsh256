@@ -7,7 +7,18 @@
 #include<ctype.h>
 
 
+
+typedef struct 
+{
+    int x,y;
+    char what_kind_of_cell;
+    int discover;
+}cell;
+
+
 int num_users;
+int resume_or_not = 0;
+cell map[40][150];
 int color_of_main_character = 0; // 0:red  , 1:blue , 2:white
 int difficulty = 1; // 0: easy   , 1:medium , 2:hard
 char user_names[100][20];
@@ -19,6 +30,8 @@ char password [31];
 char email[50];
 
 
+void initialize_map();
+void print_map();
 void get_informations();
 void pair_colors();
 int make_or_load_user();
@@ -29,6 +42,7 @@ void game_menu();
 void profile_menu();
 void Hall_of_Heroes();
 void resume_game();
+void create_game();
 void settings();
 
 
@@ -41,11 +55,20 @@ int main(){
     start_color();
     pair_colors();
     keypad(stdscr , TRUE);
+    
     mvprintw(15 ,40, "press any key to continue");
     getch();
     make_or_load_user();
     clear();
-    mvprintw(1,3,"salam zendegi");
+    if (resume_or_not == 0)
+    {
+        create_game();
+    }else 
+    {
+        resume_game();
+    }
+    
+    
     getch();
     endwin();
     return 0;
@@ -599,10 +622,10 @@ void game_menu(){
     }
     if (which == 0)
     {
-        resume_game();
+        resume_or_not = 0;
     }else if (which == 1)
     {
-        resume_game();
+        resume_or_not = 1;
     }else if (which == 2)
     {
         Hall_of_Heroes();
@@ -728,7 +751,45 @@ void settings(){
     getch();
 }
 
+
+//----------------------------------initiallize map
+void initialize_map(){
+    for (int i = 0; i < 40; i++)
+    {
+        for (int j = 0; j < 150; j++)
+        {
+            map[i][j].x = i;
+            map[i][j].y = j;
+            map[i][j].what_kind_of_cell = ' ';
+            map[i][j].discover = 0;
+        }
+    }
+}
+// ----------------------------------- print map
+void print_map(){
+    for (int i = 0; i < 40; i++)
+    {
+        for(int j = 0 ; j< 150 ; j++){
+            if (map[i][j].discover)
+            {
+                mvprintw(i,j,"%c" ,map[i][j].what_kind_of_cell);
+            }
+            
+        }
+    }
+    
+}
+//--------------------------------create game
+void create_game(){
+    clear();
+    mvprintw(40,150,"t");
+    getch();
+
+
+}
 //------------------------------- not developed yet
+
+
 void resume_game(){
     printw("7");
 }
