@@ -1,3 +1,6 @@
+// mohammad hossein shirazi 403110499
+
+//------------------------includes
 #include<ncurses.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -7,18 +10,35 @@
 #include<ctype.h>
 
 
+//-------------------------------defines
+#define MIN_ROOM_SIZE 6
+#define MAX_ROOM_SIZE 12
+#define MIN_ROOM_NUMBER 6
+#define MAX_ROOM_NUMBER 9
+#define MAP_WIDTH 30
+#define MAP_LENTGH 120
 
+
+//------------------------------structs
 typedef struct 
 {
     int x,y;
     char what_kind_of_cell;
     int discover;
-}cell;
+}Cell;
+
+typedef struct 
+{
+    int x , y;
+    int lentgh , width;
+}Room;
 
 
+//------------------------------variables
 int num_users;
 int resume_or_not = 0;
-cell map[40][150];
+Cell map[MAP_WIDTH][MAP_LENTGH];
+Room rooms[9];
 int color_of_main_character = 0; // 0:red  , 1:blue , 2:white
 int difficulty = 1; // 0: easy   , 1:medium , 2:hard
 char user_names[100][20];
@@ -30,6 +50,8 @@ char password [31];
 char email[50];
 
 
+//------------------------------functions
+void random_map_generate();
 void initialize_map();
 void print_map();
 void get_informations();
@@ -44,6 +66,7 @@ void Hall_of_Heroes();
 void resume_game();
 void create_game();
 void settings();
+void tester_print();
 
 
 
@@ -67,6 +90,17 @@ int main(){
     {
         resume_game();
     }
+    clear();
+    initialize_map();
+    random_map_generate();
+    print_map();
+    // tester_print();
+    // for (int i = 0; i < 6; i++)
+    // {
+    //     mvprintw(i,1,"%d %d %d %d" , rooms[i].x , rooms[i].y,rooms[i].width , rooms[i].lentgh);
+    // }
+    
+    
     
     
     getch();
@@ -754,41 +788,123 @@ void settings(){
 
 //----------------------------------initiallize map
 void initialize_map(){
-    for (int i = 0; i < 40; i++)
+    for (int i = 0; i < MAP_WIDTH; i++)
     {
-        for (int j = 0; j < 150; j++)
+        for (int j = 0; j < MAP_LENTGH; j++)
         {
             map[i][j].x = i;
             map[i][j].y = j;
             map[i][j].what_kind_of_cell = ' ';
-            map[i][j].discover = 0;
+            map[i][j].discover = 1;
         }
     }
 }
+
 // ----------------------------------- print map
 void print_map(){
-    for (int i = 0; i < 40; i++)
+    for (int i = 0; i < MAP_WIDTH; i++)
     {
-        for(int j = 0 ; j< 150 ; j++){
+        for(int j = 0 ; j< MAP_LENTGH; j++){
             if (map[i][j].discover)
             {
                 mvprintw(i,j,"%c" ,map[i][j].what_kind_of_cell);
+            }else{
+                mvprintw(i,j," ");
             }
             
         }
+    }   
+}
+
+//--------------------------------random map generation
+int rooms_overlap(int i , int j){
+    if (rooms[i].x+1 >= rooms[j].x && rooms[i].x <= rooms[j].x + rooms[j].width+1) 
+    {
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].lentgh+1)
+        {
+            return 1;
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].lentgh+1)
+        {
+            return 1;
+        }
+    }else if (rooms[j].x+1 >= rooms[i].x && rooms[j].x <= rooms[i].x + rooms[i].width+1) 
+    {
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].lentgh+1)
+        {
+            return 1;
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].lentgh+1)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void room_generator(int i){
+    while (1)
+    {
+        rooms[i].lentgh  = MIN_ROOM_SIZE + rand() % (MAX_ROOM_SIZE - MIN_ROOM_SIZE);
+        rooms[i].width  = MIN_ROOM_SIZE + rand() % (MAX_ROOM_SIZE - MIN_ROOM_SIZE);
+        rooms[i].x = rand() % (MAP_WIDTH - rooms[i].width);
+        rooms[i].y = rand() % (MAP_LENTGH - rooms[i].lentgh);
+        int w = 1;
+        for (int j = 0; j < i; j++)
+        {
+            if (rooms_overlap(j,i))
+            {
+                w = 0;
+            }
+        }if (w)
+        {
+            break;
+        }  
+    }
+}
+
+void random_map_generate(){
+    int number_of_rooms = MIN_ROOM_NUMBER + rand() % (MAX_ROOM_NUMBER - MIN_ROOM_NUMBER);
+    for (int i = 0; i < number_of_rooms; i++)
+    {
+        clear();
+        room_generator(i);
+        for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].lentgh ; j ++)
+        {
+            for (int t = rooms[i].y ; t <= rooms[i].y + rooms[i].lentgh; t ++)
+            {
+                map[j][t].what_kind_of_cell = 'r';
+                map[j][t].discover = 1;
+            }
+            // mvprintw(j,1,"%d" , j); 
+        }
+        // getch();
+        
     }
     
 }
+
 //--------------------------------create game
-void create_game(){
-    clear();
-    mvprintw(40,150,"t");
-    getch();
 
 
+//----------------------------------tester
+void tester_print(){
+    for (int i = 0; i < MAP_WIDTH; i++)
+    {
+        for (int j = 0; j < MAP_LENTGH; j++)
+        {
+            mvprintw(i,j,"%c" , map[i][j].what_kind_of_cell);
+        }
+        
+    }
+    
 }
+
 //------------------------------- not developed yet
 
+
+
+void create_game(){
+    clear();
+}
 
 void resume_game(){
     printw("7");
