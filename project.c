@@ -8,6 +8,9 @@
 #include<unistd.h>
 #include<time.h>
 #include<ctype.h>
+#include<math.h>
+#include<float.h>
+
 
 
 //-------------------------------defines
@@ -25,20 +28,24 @@ typedef struct
     int x,y;
     char what_kind_of_cell;
     int discover;
+    int color;
 }Cell;
 
 typedef struct 
 {
     int x , y;
-    int lentgh , width;
+    int length , width;
 }Room;
 
 
 //------------------------------variables
+int message = 3; // 3:nothing 0:new floor 1:new room 2:found gold
+char all_messages[5][50];
 int num_users;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
 Room rooms[9];
+int num_rooms;
 int color_of_main_character = 0; // 0:red  , 1:blue , 2:white
 int difficulty = 1; // 0: easy   , 1:medium , 2:hard
 char user_names[100][20];
@@ -51,6 +58,8 @@ char email[50];
 
 
 //------------------------------functions
+void set_messages();
+void messages();
 void random_map_generate();
 void initialize_map();
 void print_map();
@@ -73,11 +82,13 @@ void tester_print();
 
 int main(){
     get_informations();
+    set_messages();
     srand(time(NULL));
     initscr();
     start_color();
     pair_colors();
     keypad(stdscr , TRUE);
+    initialize_map();
     
     mvprintw(15 ,40, "press any key to continue");
     getch();
@@ -91,10 +102,9 @@ int main(){
         resume_game();
     }
     clear();
-    initialize_map();
     random_map_generate();
-    print_map();
-    // tester_print();
+    // print_map();
+    tester_print();
     // for (int i = 0; i < 6; i++)
     // {
     //     mvprintw(i,1,"%d %d %d %d" , rooms[i].x , rooms[i].y,rooms[i].width , rooms[i].lentgh);
@@ -109,6 +119,7 @@ int main(){
 }
 //----------------------- painting
 void pair_colors(){
+    init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
     init_pair(3,COLOR_BLACK,COLOR_GREEN); // to congratulate
@@ -509,7 +520,7 @@ void login(){
         getstr(user_name);
         if (strcmp(user_name,"Y") == 0)
         {
-            create_user();
+            game_menu();
         }
         int is_user_name_exist = -1;
         
@@ -796,6 +807,7 @@ void initialize_map(){
             map[i][j].y = j;
             map[i][j].what_kind_of_cell = ' ';
             map[i][j].discover = 1;
+            map[i][j].color = 0;
         }
     }
 }
@@ -807,7 +819,9 @@ void print_map(){
         for(int j = 0 ; j< MAP_LENTGH; j++){
             if (map[i][j].discover)
             {
+                attron(COLOR_PAIR(map[i][j].color));
                 mvprintw(i,j,"%c" ,map[i][j].what_kind_of_cell);
+                attroff(COLOR_PAIR(map[i][j].color));
             }else{
                 mvprintw(i,j," ");
             }
@@ -817,22 +831,35 @@ void print_map(){
 }
 
 //--------------------------------random map generation
+int in_which_room(int x , int y){
+    for (int i = 0; i < num_rooms; i++)
+    {
+        if (x >= rooms[i].x && x <= rooms[i].x + rooms[i].width
+            && y >= rooms[i].y && y <= rooms[i].y + rooms[i].length)
+        {
+            return i;
+        }
+        
+    }
+    return -1;
+    
+}
 int rooms_overlap(int i , int j){
     if (rooms[i].x+1 >= rooms[j].x && rooms[i].x <= rooms[j].x + rooms[j].width+1) 
     {
-        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].lentgh+1)
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+1)
         {
             return 1;
-        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].lentgh+1)
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+1)
         {
             return 1;
         }
     }else if (rooms[j].x+1 >= rooms[i].x && rooms[j].x <= rooms[i].x + rooms[i].width+1) 
     {
-        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].lentgh+1)
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+1)
         {
             return 1;
-        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].lentgh+1)
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+1)
         {
             return 1;
         }
@@ -843,10 +870,10 @@ int rooms_overlap(int i , int j){
 void room_generator(int i){
     while (1)
     {
-        rooms[i].lentgh  = MIN_ROOM_SIZE + rand() % (MAX_ROOM_SIZE - MIN_ROOM_SIZE);
+        rooms[i].length  = MIN_ROOM_SIZE + rand() % (MAX_ROOM_SIZE - MIN_ROOM_SIZE);
         rooms[i].width  = MIN_ROOM_SIZE + rand() % (MAX_ROOM_SIZE - MIN_ROOM_SIZE);
-        rooms[i].x = rand() % (MAP_WIDTH - rooms[i].width);
-        rooms[i].y = rand() % (MAP_LENTGH - rooms[i].lentgh);
+        rooms[i].x = 5 + rand() % (MAP_WIDTH - rooms[i].width);
+        rooms[i].y = rand() % (MAP_LENTGH - rooms[i].length);
         int w = 1;
         for (int j = 0; j < i; j++)
         {
@@ -854,36 +881,155 @@ void room_generator(int i){
             {
                 w = 0;
             }
-        }if (w)
+        }if (rooms[i].x+rooms[i].width >= MAP_WIDTH || rooms[i].y + rooms[i].length >= MAP_LENTGH)
+        {
+            w = 0;
+        }
+        
+        if (w)
         {
             break;
         }  
     }
 }
 
-void random_map_generate(){
-    int number_of_rooms = MIN_ROOM_NUMBER + rand() % (MAX_ROOM_NUMBER - MIN_ROOM_NUMBER);
-    for (int i = 0; i < number_of_rooms; i++)
-    {
-        clear();
-        room_generator(i);
-        for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].lentgh ; j ++)
-        {
-            for (int t = rooms[i].y ; t <= rooms[i].y + rooms[i].lentgh; t ++)
-            {
-                map[j][t].what_kind_of_cell = 'r';
-                map[j][t].discover = 1;
-            }
-            // mvprintw(j,1,"%d" , j); 
+int find_closest_room(int room_index) {
+    int min_distance_squared = 100000;
+    int closest_room = -1;
+
+    int x1 = rooms[room_index].x + rooms[room_index].width / 2.0;
+    int y1 = rooms[room_index].y + rooms[room_index].length / 2.0;
+
+    for (int i = 0; i < num_rooms; i++) {
+        if (i == room_index) continue;
+
+        int x2 = rooms[i].x + rooms[i].width / 2;
+        int y2 = rooms[i].y + rooms[i].length / 2;
+
+        // محاسبه مربع فاصله
+        int distance_squared = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+
+        if (distance_squared < min_distance_squared) {
+            min_distance_squared = distance_squared;
+            closest_room = i;
         }
-        // getch();
+    }
+    return closest_room;
+}
+
+void generate_path(int room_index){
+    int closest_room = num_rooms - 1;
+    int x_current = rooms[room_index].x + rooms[room_index].width / 2;
+    int x_goal = rooms[closest_room].x + rooms[closest_room].width / 2;
+    int y_current = rooms[room_index].y + rooms[room_index].length / 2;
+    int y_goal = rooms[closest_room].y + rooms[closest_room].length / 2;
+    while (x_current != x_goal || y_current != y_goal)
+    {
+        int last_x = x_current;
+        int last_y = y_current;
+        // تعیین جهت حرکت
+        int direction = rand() % 2;
+        if (direction == 1) {
+            if (x_goal < x_current) {
+                x_current--;
+            } else if (x_goal > x_current) {
+                x_current++;
+            }
+        } else {
+            if (y_goal < y_current) {
+                y_current--;
+            } else if (y_goal > y_current) {
+                y_current++;
+            }
+        }
+
+        if (map[x_current][y_current].what_kind_of_cell == '|' || map[x_current][y_current].what_kind_of_cell == '_')
+        {
+            map[x_current][y_current].what_kind_of_cell = '+';
+            if (map[last_x][last_y].what_kind_of_cell == '+')
+            {
+                if (last_x == rooms[room_index].x || last_x == rooms[room_index].x + rooms[room_index].width)
+                {
+                    map[last_x][last_y].what_kind_of_cell = '_';
+                }else if(last_y == rooms[room_index].y || last_y == rooms[room_index].y + rooms[room_index].length)
+                {
+                    map[last_x][last_y].what_kind_of_cell = '|';
+                }
+            }else if (map[last_x][last_y].what_kind_of_cell == '#')
+            {
+                break;
+            }
+        }else if (map[x_current][y_current].what_kind_of_cell == ' ')
+        {
+            map[x_current][y_current].what_kind_of_cell = '#';
+        }
+        
+        
         
     }
     
 }
 
-//--------------------------------create game
 
+void random_map_generate(){
+    num_rooms = MIN_ROOM_NUMBER + rand() % (MAX_ROOM_NUMBER - MIN_ROOM_NUMBER-1);
+    for (int i = 0; i < num_rooms; i++)
+    {
+        clear();
+        room_generator(i);
+        for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].width ; j ++)
+        {
+            for (int t = rooms[i].y ; t <= rooms[i].y + rooms[i].length; t ++)
+            {
+                map[j][t].what_kind_of_cell = '.';
+                map[j][t].discover = 0;
+            }
+            // mvprintw(j,1,"%d" , j); 
+        }
+        for (int j = rooms[i].x; j <= rooms[i].x+rooms[i].width; j++)
+        {
+            map[j][rooms[i].y].what_kind_of_cell = '|';
+            map[j][rooms[i].y+rooms[i].length].what_kind_of_cell = '|';
+        }
+        for (int j = rooms[i].y; j <= rooms[i].y+rooms[i].length; j++)
+        {
+            map[rooms[i].x][j].what_kind_of_cell = '_';
+            map[rooms[i].x + rooms[i].width][j].what_kind_of_cell = '_';
+        }
+        
+        clear();
+        // mvprintw(1,1,"%d" ,rooms[i].x);
+        // getch();
+    }
+
+    for (int i = 0; i < num_rooms; i++)
+    {
+        generate_path(i);
+    }
+    
+    
+    
+    
+}
+
+//--------------------------------messages
+void set_messages(){
+    strcpy(all_messages[0] , "You have entered a new floor.");
+    strcpy(all_messages[1] , "You have entered a new room.");
+    strcpy(all_messages[2] , "You found a piece of gold.");
+}
+
+void messages(){
+    for (int i = 0; i < 50; i++)
+    {
+        map[0][i].what_kind_of_cell = ' ';
+    }
+    
+    for (int i = 0; i < strlen(all_messages[message]); i++)
+    {
+        map[0][i].what_kind_of_cell = all_messages[message][i];
+    }
+}
 
 //----------------------------------tester
 void tester_print(){
