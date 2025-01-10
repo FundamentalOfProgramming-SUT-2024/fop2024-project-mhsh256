@@ -35,6 +35,7 @@ typedef struct
 {
     int x , y;
     int length , width;
+    int connecting_rooms[10];
 }Room;
 
 
@@ -847,19 +848,19 @@ int in_which_room(int x , int y){
 int rooms_overlap(int i , int j){
     if (rooms[i].x+1 >= rooms[j].x && rooms[i].x <= rooms[j].x + rooms[j].width+1) 
     {
-        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+1)
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+5)
         {
             return 1;
-        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+1)
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+5)
         {
             return 1;
         }
-    }else if (rooms[j].x+1 >= rooms[i].x && rooms[j].x <= rooms[i].x + rooms[i].width+1) 
+    }else if (rooms[j].x+1 >= rooms[i].x && rooms[j].x <= rooms[i].x + rooms[i].width+5) 
     {
-        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+1)
+        if (rooms[i].y+1 >= rooms[j].y && rooms[i].y <= rooms[j].y + rooms[j].length+5)
         {
             return 1;
-        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+1)
+        }else if (rooms[j].y+1 >= rooms[i].y && rooms[j].y <= rooms[i].y + rooms[i].length+5)
         {
             return 1;
         }
@@ -917,8 +918,7 @@ int find_closest_room(int room_index) {
     return closest_room;
 }
 
-void generate_path(int room_index){
-    int closest_room = num_rooms - 1;
+void generate_path(int room_index , int closest_room){
     int x_current = rooms[room_index].x + rooms[room_index].width / 2;
     int x_goal = rooms[closest_room].x + rooms[closest_room].width / 2;
     int y_current = rooms[room_index].y + rooms[room_index].length / 2;
@@ -957,6 +957,9 @@ void generate_path(int room_index){
                 }
             }else if (map[last_x][last_y].what_kind_of_cell == '#')
             {
+                int which_room = in_which_room(x_current,y_current);
+                rooms[which_room].connecting_rooms[room_index] = 1;
+                rooms[room_index].connecting_rooms[which_room] = 1;
                 break;
             }
         }else if (map[x_current][y_current].what_kind_of_cell == ' ')
@@ -977,6 +980,9 @@ void random_map_generate(){
     {
         clear();
         room_generator(i);
+        for (int j ; j < num_rooms; j++){
+            rooms[i].connecting_rooms[j] = 0;
+        }
         for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].width ; j ++)
         {
             for (int t = rooms[i].y ; t <= rooms[i].y + rooms[i].length; t ++)
@@ -1001,11 +1007,23 @@ void random_map_generate(){
         // mvprintw(1,1,"%d" ,rooms[i].x);
         // getch();
     }
-
+    
+    
+    int root = 1 + rand()%(num_rooms - 2);
     for (int i = 0; i < num_rooms; i++)
     {
-        generate_path(i);
+        generate_path(i,root);
     }
+    for (int i = 1; i < num_rooms; i+= 2)
+    {
+        int close = find_closest_room(i);
+        if (close != root && rooms[close].connecting_rooms[i] == 0)
+        {
+            generate_path(i,close);
+        }
+        
+    }
+    
     
     
     
