@@ -46,8 +46,9 @@ int num_users;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
 Room rooms[9];
+int discoverd_rooms[9];
 int num_rooms;
-int color_of_main_character = 0; // 0:red  , 1:blue , 2:white
+int color_of_main_character = 0; // 0:white  , 5:red , 10:blue
 int difficulty = 1; // 0: easy   , 1:medium , 2:hard
 char user_names[100][20];
 char passwords [100][100];
@@ -56,6 +57,10 @@ FILE *fptr;
 char user_name[50];
 char password [31];
 char email[50];
+int hero_x;
+int hero_y;
+char under_hero_kind = '.';
+int under_hero_color = 0;
 
 
 //------------------------------functions
@@ -76,7 +81,11 @@ void Hall_of_Heroes();
 void resume_game();
 void create_game();
 void settings();
+void discover_room(int room);
+int in_which_room(int x , int y);
 void tester_print();
+void tester_discover();
+void move_hero();
 
 
 
@@ -89,27 +98,29 @@ int main(){
     start_color();
     pair_colors();
     keypad(stdscr , TRUE);
-    initialize_map();
     
     mvprintw(15 ,40, "press any key to continue");
     getch();
     make_or_load_user();
+    
     clear();
-    if (resume_or_not == 0)
-    {
-        create_game();
-    }else 
-    {
-        resume_game();
-    }
-    clear();
+    initialize_map();
     random_map_generate();
-    // print_map();
-    tester_print();
-    // for (int i = 0; i < 6; i++)
-    // {
-    //     mvprintw(i,1,"%d %d %d %d" , rooms[i].x , rooms[i].y,rooms[i].width , rooms[i].lentgh);
-    // }
+    discover_room(0);
+    while (1)
+    {
+        clear();
+        tester_print();
+        int direction = getch();
+        if (direction == 'q')
+        {
+            break;
+        }
+        move_hero(direction);
+    }
+    
+    // tester_print();
+    // tester_discover();
     
     
     
@@ -124,6 +135,9 @@ void pair_colors(){
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
     init_pair(3,COLOR_BLACK,COLOR_GREEN); // to congratulate
+    init_pair(5,COLOR_RED,COLOR_BLACK);
+    init_pair(6,COLOR_YELLOW,COLOR_BLACK); // walls
+    init_pair(10,COLOR_BLUE,COLOR_BLACK);
 }
 
 //-----------------------------------get informations
@@ -521,7 +535,7 @@ void login(){
         getstr(user_name);
         if (strcmp(user_name,"Y") == 0)
         {
-            game_menu();
+            break;
         }
         int is_user_name_exist = -1;
         
@@ -547,6 +561,11 @@ void login(){
     }
     while (1) // enter password
     {
+        if (strcmp(user_name,"Y") == 0)
+        {
+            break;
+        }
+        
         clear();
         attron(A_BOLD);
         mvprintw(1,1,"LOGIN PAGE!!!");
@@ -756,23 +775,23 @@ void settings(){
         if (which == 0)
         {
             attron(COLOR_PAIR(1));
-            mvprintw(8,3,"red");
+            mvprintw(8,3,"white");
             attroff(COLOR_PAIR(1));
-            mvprintw(9,3,"blue");
-            mvprintw(10,3,"white");
+            mvprintw(9,3,"red");
+            mvprintw(10,3,"blue");
         }else if (which == 1)
         {
-            mvprintw(8,3,"red");
+            mvprintw(8,3,"white");
             attron(COLOR_PAIR(1));
-            mvprintw(9,3,"blue");
+            mvprintw(9,3,"red");
             attroff(COLOR_PAIR(1));
-            mvprintw(10,3,"white");
+            mvprintw(10,3,"blue");
         }else if (which == 2)
         {
-            mvprintw(8,3,"red");
-            mvprintw(9,3,"blue");
+            mvprintw(8,3,"white");
+            mvprintw(9,3,"red");
             attron(COLOR_PAIR(1));
-            mvprintw(10,3,"white");
+            mvprintw(10,3,"blue");
             attroff(COLOR_PAIR(1));
         }
         key = getch();
@@ -790,7 +809,7 @@ void settings(){
             break;
         }
     }
-    color_of_main_character = which;
+    color_of_main_character = 5  * which;
     attron(COLOR_PAIR(3));
     mvprintw(15,1,"settings applied successfully");
     attroff(COLOR_PAIR(3));
@@ -807,10 +826,15 @@ void initialize_map(){
             map[i][j].x = i;
             map[i][j].y = j;
             map[i][j].what_kind_of_cell = ' ';
-            map[i][j].discover = 1;
+            map[i][j].discover = 0;
             map[i][j].color = 0;
         }
     }
+    for (int i = 0; i < 9; i++)
+    {
+        discoverd_rooms[i] = 0;
+    }
+    
 }
 
 // ----------------------------------- print map
@@ -995,12 +1019,17 @@ void random_map_generate(){
         for (int j = rooms[i].x; j <= rooms[i].x+rooms[i].width; j++)
         {
             map[j][rooms[i].y].what_kind_of_cell = '|';
+            map[j][rooms[i].y].color = 6;
             map[j][rooms[i].y+rooms[i].length].what_kind_of_cell = '|';
+            map[j][rooms[i].y+rooms[i].length].color = 6;
+            
         }
         for (int j = rooms[i].y; j <= rooms[i].y+rooms[i].length; j++)
         {
             map[rooms[i].x][j].what_kind_of_cell = '_';
+            map[rooms[i].x][j].color = 6;
             map[rooms[i].x + rooms[i].width][j].what_kind_of_cell = '_';
+            map[rooms[i].x + rooms[i].width][j].color = 6;
         }
         
         clear();
@@ -1023,6 +1052,11 @@ void random_map_generate(){
         }
         
     }
+    hero_x = rooms[0].x + 1 + (rand()%(rooms[0].width -1));
+    hero_y = rooms[0].y + 1 + (rand()%(rooms[0].length -1));
+    map[hero_x][hero_y].what_kind_of_cell = '&';
+    map[hero_x][hero_y].color = color_of_main_character;
+
     
     
     
@@ -1049,19 +1083,104 @@ void messages(){
     }
 }
 
+
+//---------------------------------- game actions
+void discover_room(int room){
+    mvprintw(1,1,"%d %d",rooms[room].x , rooms[room].x + rooms[room].width);
+    for (int i = rooms[room].x; i <= rooms[room].x + rooms[room].width; i++)
+    {
+        
+        for (int j = rooms[room].y; j <= rooms[room].y + rooms[room].length; j++)
+        {
+            map[i][j].discover = 1;
+            // mvprintw(i,j,"%d" , map[i][j].discover);
+        }
+    }
+    discoverd_rooms[room] = 1;
+}
+
+int is_move_allowed(int x , int y){
+    if (map[x][y].what_kind_of_cell == '+' || map[x][y].what_kind_of_cell == '.'
+    || map[x][y].what_kind_of_cell == '#')
+    {
+        return 1;
+    }
+    return 0;
+}
+
+void move_hero(int direction){
+    int next_x = hero_x;
+    int next_y = hero_y;
+    if (direction == '1')
+    {
+        next_x ++;
+        next_y --;
+    }else if (direction == '3')
+    {
+        next_x ++;
+        next_y ++;
+    }else if (direction == '9')
+    {
+        next_x --;
+        next_y ++;
+    }else if (direction == '7')
+    {
+        next_x --;
+        next_y --;
+    }else if (direction == '2')
+    {
+        next_x ++;
+    }else if (direction == '8')
+    {
+        next_x --;
+    }else if (direction == '4')
+    {
+        next_y --;
+    }else if (direction == '6')
+    {
+        next_y ++;
+    }
+    if (is_move_allowed(next_x,next_y))
+    {
+        map[hero_x][hero_y].what_kind_of_cell = under_hero_kind;
+        map[hero_x][hero_y].color = under_hero_color;
+        under_hero_kind = map[next_x][next_y].what_kind_of_cell;
+        under_hero_color = map[next_x][next_y].color;
+        hero_x = next_x;
+        hero_y = next_y;
+        map[hero_x][hero_y].what_kind_of_cell = '&';
+        map[hero_x][hero_y].color = color_of_main_character;
+    }
+    
+    
+    
+    
+}
 //----------------------------------tester
 void tester_print(){
     for (int i = 0; i < MAP_WIDTH; i++)
     {
         for (int j = 0; j < MAP_LENTGH; j++)
         {
+            attron(COLOR_PAIR(map[i][j].color));
             mvprintw(i,j,"%c" , map[i][j].what_kind_of_cell);
+            attroff(COLOR_PAIR(map[i][j].color));
         }
         
     }
     
 }
 
+void tester_discover(){
+    for (int i = 0; i < MAP_WIDTH; i++)
+    {
+        for (int j = 0; j < MAP_LENTGH; j++)
+        {
+            mvprintw(i,j,"%d" , map[i][j].discover);
+        }
+        
+    }
+}
 //------------------------------- not developed yet
 
 
