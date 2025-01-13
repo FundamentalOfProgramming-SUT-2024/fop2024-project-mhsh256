@@ -64,6 +64,10 @@ char under_hero_kind = '.';
 int under_hero_color = 0;
 int show_all_map = 0;
 int which_floor = 0;
+int x_stairs = 0;
+int y_stairs = 0;
+int direction = 0;
+
 
 
 //------------------------------functions
@@ -108,51 +112,65 @@ int main(){
     make_or_load_user();
     
     clear();
-    initialize_map();
-    random_map_generate();
-    discover_room(0);
-    while (1)
+    for (int i = 1; i < 5; i++)
     {
-        clear();
-        if (show_all_map)
+        initialize_map();
+        random_map_generate();
+        discover_room(0);
+        while (i)
         {
-            tester_print();
-        }else{
-            print_map();
-        }
-        int direction = getch();
-        
-        
-        if (direction == 'M')
-        {
+            clear();
             if (show_all_map)
             {
-                show_all_map = 0;
-            }else
-                show_all_map = 1;
-            
-        }
-        else if (direction == 'f')
-        {
+                tester_print();
+            }else{
+                print_map();
+            }
             direction = getch();
-            fast_travel(direction);
+            if (under_hero_kind == '/' && under_hero_color == 7)
+            {
+                int go_to_next_floor = getch();
+                if (go_to_next_floor == 'y'){
+                    which_floor++;
+
+                    break;
+                }
+                
+            }
+            
+            
+            if (direction == 'M')
+            {
+                if (show_all_map)
+                {
+                    show_all_map = 0;
+                }else
+                    show_all_map = 1;
+                
+            }
+            
+            else if (direction == 'f')
+            {
+                direction = getch();
+                fast_travel(direction);
+            }
+            
+            
+            else if (direction == 'q')
+            {
+                break;
+            }
+            move_hero(direction);
         }
-        
-        
-        else if (direction == 'q')
-        {
-            break;
-        }
-        move_hero(direction);
     }
+    
+        
     
     // tester_print();
     // tester_discover();
     
     
     
-    
-    getch();
     endwin();
     return 0;
 }
@@ -166,7 +184,8 @@ void pair_colors(){
     init_pair(4,100,COLOR_BLACK); // path
     init_pair(5,COLOR_RED,COLOR_BLACK);
     init_pair(6,COLOR_YELLOW,COLOR_BLACK); // walls
-    init_pair(7,COLOR_GREEN,COLOR_BLACK); // stairs
+    init_pair(7,COLOR_GREEN,COLOR_BLACK); // stairs up
+    init_pair(8,COLOR_RED,COLOR_BLACK); // stairs down
     init_pair(10,COLOR_BLUE,COLOR_BLACK);
 }
 
@@ -1030,15 +1049,23 @@ void generate_path(int room_index , int closest_room){
 
 
 void random_map_generate(){
+    if(which_floor == 0)
+        room_generator(0);
+    else{
+        rooms[0].length = rooms[num_rooms - 1].length;
+        rooms[0].width = rooms[num_rooms - 1].width;
+        rooms[0].x = rooms[num_rooms - 1].x;
+        rooms[0].y = rooms[num_rooms - 1].y;
+    }
     num_rooms = MIN_ROOM_NUMBER + rand() % (MAX_ROOM_NUMBER - MIN_ROOM_NUMBER-1);
-    
+    for (int i = 1; i < num_rooms; i++)
+    {
+        room_generator(i);
+    }
     
     for (int i = 0; i < num_rooms; i++)
     {
-        room_generator(i);
-        for (int j ; j < num_rooms; j++){
-            rooms[i].connecting_rooms[j] = 0;
-        }
+        
         for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].width ; j ++)
         {
             for (int t = rooms[i].y ; t <= rooms[i].y + rooms[i].length; t ++)
@@ -1068,13 +1095,15 @@ void random_map_generate(){
         // getch();
     }
     
+    
+    
     //-------------------------------------path
     int root = 1 + rand()%(num_rooms - 2);
     for (int i = 0; i < num_rooms; i++)
     {
         generate_path(i,root);
     }
-    for (int i = 1; i < num_rooms; i+= 2)
+    for (int i = 1; i < num_rooms; i += 2)
     {
         int close = find_closest_room(i);
         if (close != root && rooms[close].connecting_rooms[i] == 0)
@@ -1083,15 +1112,22 @@ void random_map_generate(){
         }
         
     }
-    hero_x = rooms[0].x + 1 + (rand()%(rooms[0].width -1));
-    hero_y = rooms[0].y + 1 + (rand()%(rooms[0].length -1));
+    if (which_floor == 0)
+    {
+        hero_x = rooms[0].x + 1 + (rand()%(rooms[0].width -2));
+        hero_y = rooms[0].y + 1 + (rand()%(rooms[0].length -2));
+    }else{
+        under_hero_color = 8;
+        under_hero_kind = '/';
+    }
+    
     map[hero_x][hero_y].what_kind_of_cell = '&';
     map[hero_x][hero_y].color = color_of_main_character;
 
 
     //--------------------------stairs
-    int x_stairs = rooms[num_rooms-1].x + 1 + rand()%(rooms[num_rooms-1].width - 2);
-    int y_stairs = rooms[num_rooms-1].y + 1 + rand()%(rooms[num_rooms-1].length - 2);
+    x_stairs = rooms[num_rooms-1].x + 1 + rand()%(rooms[num_rooms-1].width - 2);
+    y_stairs = rooms[num_rooms-1].y + 1 + rand()%(rooms[num_rooms-1].length - 2);
     map[x_stairs][y_stairs].what_kind_of_cell = '/';
     map[x_stairs][y_stairs].color = 7;
     
@@ -1168,7 +1204,7 @@ int is_move_allowed(int direction){
         next_y ++;
     }
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
-    || map[next_x][next_y].what_kind_of_cell == '#')
+    || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' )
     {
         return 1;
     }
