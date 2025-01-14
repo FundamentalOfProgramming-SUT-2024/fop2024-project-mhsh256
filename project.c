@@ -37,12 +37,13 @@ typedef struct
     int x , y;
     int length , width;
     int connecting_rooms[10];
+    int theme;
 }Room;
 
 
 //------------------------------variables
-int message = 3; // 3:nothing 0:new floor 1:new room 2:found gold
-char all_messages[5][50];
+int message = 0; 
+char all_messages[10][50];
 int num_users;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
@@ -50,12 +51,12 @@ Room rooms[20];
 int discoverd_rooms[9];
 int num_rooms;
 int color_of_main_character = 0; // 0:white  , 5:red , 10:blue
-int difficulty = 1; // 0: easy   , 1:medium , 2:hard
+int difficulty = 1; // 2: easy   , 1:medium , 0:hard
 char user_names[100][20];
 char passwords [100][100];
 char emails [100][100];
 FILE *fptr;
-char user_name[50];
+char user_name[50] = "";
 char password [31];
 char email[50];
 int hero_x;
@@ -67,12 +68,12 @@ int which_floor = 0;
 int x_stairs = 0;
 int y_stairs = 0;
 int direction = 0;
+int gold = 0;
 
 
 
 //------------------------------functions
 void set_messages();
-void messages();
 void random_map_generate();
 void initialize_map();
 void print_map();
@@ -132,11 +133,37 @@ int main(){
                 int go_to_next_floor = getch();
                 if (go_to_next_floor == 'y'){
                     which_floor++;
-
+                    message = 0;
                     break;
                 }
                 
+            }else if (under_hero_kind == 'G')
+            {
+                message = 4;
+                clear();
+                if (show_all_map)
+                {
+                    tester_print();
+                }else{
+                    print_map();
+                }
+                int get_gold = getch();
+                if (get_gold == 'y')
+                {
+                    message = 2;
+                    gold += 1;
+                    under_hero_kind = '.';
+                    if (under_hero_color == 11)
+                    {
+                        gold += 4;
+                    }
+                    
+                    under_hero_color = 0;
+                }else{
+                    message = 5;
+                }
             }
+            
             
             
             if (direction == 'M')
@@ -177,16 +204,19 @@ int main(){
 //----------------------- painting
 void pair_colors(){
     init_color(100,600,300,0);
+    init_color(101,239,250,192);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
     init_pair(3,COLOR_BLACK,COLOR_GREEN); // to congratulate
     init_pair(4,100,COLOR_BLACK); // path
     init_pair(5,COLOR_RED,COLOR_BLACK);
-    init_pair(6,COLOR_YELLOW,COLOR_BLACK); // walls
+    init_pair(6,101,COLOR_BLACK); // walls
     init_pair(7,COLOR_GREEN,COLOR_BLACK); // stairs up
     init_pair(8,COLOR_RED,COLOR_BLACK); // stairs down
+    init_pair(9,COLOR_YELLOW,COLOR_BLACK); // gold
     init_pair(10,COLOR_BLUE,COLOR_BLACK);
+    init_pair(11,COLOR_BLACK,COLOR_YELLOW); // black gold
 }
 
 //-----------------------------------get informations
@@ -801,7 +831,7 @@ void settings(){
         }
         refresh();
     }
-    difficulty = which;
+    difficulty = 2 - which;
     which = 0;
     while (1) // main character settings
     {
@@ -901,7 +931,9 @@ void print_map(){
             }
             
         }
-    }   
+    }  
+    mvprintw(0,0,"%s",all_messages[message]); 
+    mvprintw(0,50,"GOLD: %d" , gold);
 }
 
 //--------------------------------random map generation
@@ -965,6 +997,7 @@ void room_generator(int i){
             break;
         }  
     }
+    rooms[i].theme = 1;
 }
 
 int find_closest_room(int room_index) {
@@ -1065,6 +1098,10 @@ void random_map_generate(){
     
     for (int i = 0; i < num_rooms; i++)
     {
+        for (int j = 0; j < 10; j++)
+        {
+            rooms[i].connecting_rooms[j] = 0;
+        }
         
         for (int j = rooms[i].x;j <= rooms[i].x+rooms[i].width ; j ++)
         {
@@ -1131,6 +1168,26 @@ void random_map_generate(){
     map[x_stairs][y_stairs].what_kind_of_cell = '/';
     map[x_stairs][y_stairs].color = 7;
     
+    //----------------------------gold
+    int num_of_golds;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_golds = rand() % (3 + difficulty);
+        for (int j = 0; j < num_of_golds; j++)
+        {
+            int gold_x = rooms[i].x + 1 + rand()%(rooms[i].width-1);
+            int gold_y = rooms[i].y + 1 + rand()%(rooms[i].width - 1);
+            map[gold_x][gold_y].what_kind_of_cell = 'G';
+            map[gold_x][gold_y].color = 9;
+            int black_gold = rand()%10;
+            if (black_gold == 1)
+            {
+                map[gold_x][gold_y].color = 11;
+            }
+            
+        }
+        
+    }
     
     
     
@@ -1141,19 +1198,17 @@ void set_messages(){
     strcpy(all_messages[0] , "You have entered a new floor.");
     strcpy(all_messages[1] , "You have entered a new room.");
     strcpy(all_messages[2] , "You found a piece of gold.");
-}
-
-void messages(){
+    strcpy(all_messages[3],"You have left the room.");
+    strcpy(all_messages[4],"Do you want to get the gold?");
+    strcpy(all_messages[5],"You droped the gold!");
     for (int i = 0; i < 50; i++)
     {
-        map[0][i].what_kind_of_cell = ' ';
+        map[0][i].discover = 1;
     }
     
-    for (int i = 0; i < strlen(all_messages[message]); i++)
-    {
-        map[0][i].what_kind_of_cell = all_messages[message][i];
-    }
 }
+
+
 
 
 //---------------------------------- game actions
@@ -1204,7 +1259,8 @@ int is_move_allowed(int direction){
         next_y ++;
     }
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
-    || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' )
+    || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' 
+    || map[next_x][next_y].what_kind_of_cell == 'G')
     {
         return 1;
     }
@@ -1245,6 +1301,12 @@ void move_hero(int direction){
     }
     if (is_move_allowed(direction))
     {
+        int enter_or_quit_room = 0;
+        if (under_hero_kind == '#')
+        {
+            enter_or_quit_room = 1;
+        }
+        
         map[hero_x][hero_y].what_kind_of_cell = under_hero_kind;
         map[hero_x][hero_y].color = under_hero_color;
         under_hero_kind = map[next_x][next_y].what_kind_of_cell;
@@ -1263,6 +1325,13 @@ void move_hero(int direction){
         map[hero_x-1][hero_y].discover = 1;
         if (under_hero_kind == '+')
         {
+            if (enter_or_quit_room)
+            {
+                message = 1;
+            }else{
+                message = 3;
+            }
+            
             discover_room(in_which_room(hero_x,hero_y));
         }
         
@@ -1288,7 +1357,8 @@ void tester_print(){
         }
         
     }
-    
+    mvprintw(0,0,"%s",all_messages[message]); 
+    mvprintw(0,50,"GOLD: %d" , gold);
 }
 
 void tester_discover(){
