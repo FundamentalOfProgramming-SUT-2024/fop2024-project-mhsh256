@@ -43,7 +43,7 @@ typedef struct
 
 //------------------------------variables
 int message = 0; 
-char all_messages[10][50];
+char all_messages[20][50];
 int num_users;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
@@ -71,6 +71,7 @@ int direction = 0;
 int gold = 0;
 int window_y;
 int window_x;
+int spells[3] = {0};// 0:health  1:speed  2:damage
 
 
 
@@ -198,7 +199,34 @@ int main(){
             }else if (under_hero_kind == '=')
             {
                 see_next_room();
+                clear();
+                if (show_all_map)
+                {
+                    tester_print();
+                }else{
+                    print_map();
+                }
+            }else if (under_hero_kind == 'T')
+            {
+                message = 9;
+                if (show_all_map)
+                {
+                    tester_print();
+                }else{
+                    print_map();
+                }
+                int get_spell = getch();
+                if (get_spell == 'y')
+                {
+                    message = under_hero_color - 7;
+                    spells[under_hero_color-13] ++;
+                    under_hero_kind = '.';
+                    under_hero_color = 0;
+                }else{
+                    message = 10;
+                }
             }
+            
             
             
             
@@ -220,6 +248,8 @@ int main(){
 void pair_colors(){
     init_color(100,600,300,0);
     init_color(101,239,250,192);
+    init_color(102,1000,8,863);
+    init_color(103,1000,161,47);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
@@ -233,6 +263,9 @@ void pair_colors(){
     init_pair(10,COLOR_BLUE,COLOR_BLACK);
     init_pair(11,COLOR_BLACK,COLOR_YELLOW); // black gold
     init_pair(12,COLOR_CYAN,COLOR_BLACK); // window
+    init_pair(13,COLOR_BLACK,102); // health spell
+    init_pair(14,COLOR_BLACK,COLOR_BLUE); // speed spell
+    init_pair(15,COLOR_BLACK,103); // damage spell
 }
 
 //-----------------------------------get informations
@@ -950,6 +983,7 @@ void print_map(){
     }  
     mvprintw(0,0,"%s",all_messages[message]); 
     mvprintw(0,50,"GOLD: %d" , gold);
+    mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
 
 //--------------------------------random map generation
@@ -1194,8 +1228,8 @@ void random_map_generate(){
         num_of_golds = rand() % (3 + difficulty);
         for (int j = 0; j < num_of_golds; j++)
         {
-            int gold_x = rooms[i].x + 1 + rand()%(rooms[i].width-1);
-            int gold_y = rooms[i].y + 1 + rand()%(rooms[i].width - 1);
+            int gold_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int gold_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
             map[gold_x][gold_y].what_kind_of_cell = 'G';
             map[gold_x][gold_y].color = 9;
             int black_gold = rand()%10;
@@ -1207,6 +1241,26 @@ void random_map_generate(){
         }
         
     }
+    
+    //---------------------------------spell
+    int num_of_spells;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_spells = rand() % (2+difficulty);
+        for (int j = 0; j < num_of_spells - 1; j++)
+        {
+            int spell_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int spell_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
+            map[spell_x][spell_y].what_kind_of_cell = 'T';
+            int spell_color = 13 + rand() % 3;
+            map[spell_x][spell_y].color = spell_color;
+        }
+        
+    }
+    
+    
+    
+    
     //-----------------hero
     if (which_floor == 0)
     {
@@ -1259,6 +1313,11 @@ void set_messages(){
     strcpy(all_messages[3],"You have left the room.");
     strcpy(all_messages[4],"Do you want to get the gold?");
     strcpy(all_messages[5],"You droped the gold!");
+    strcpy(all_messages[6], "You found a health spell.");
+    strcpy(all_messages[7], "You found a speed spell.");
+    strcpy(all_messages[8], "You found a damage spell.");
+    strcpy(all_messages[9],"Do you want to get the spell?");
+    strcpy(all_messages[10],"You droped the spell!");
     for (int i = 0; i < 50; i++)
     {
         map[0][i].discover = 1;
@@ -1287,7 +1346,7 @@ void discover_room(int room){
 void see_next_room(){
     int x = hero_x;
     int y = hero_y;
-    if (map[hero_x][hero_y-1].what_kind_of_cell == '.')
+    if (map[hero_x][hero_y-1].what_kind_of_cell == '.' || map[hero_x][hero_y-1].what_kind_of_cell == '_')
     {
         while (y < MAP_LENTGH - 1 && map[x][y].what_kind_of_cell != '=' 
         && map[x][y].what_kind_of_cell != '+')
@@ -1334,7 +1393,8 @@ int is_move_allowed(int direction){
     }
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
     || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' 
-    || map[next_x][next_y].what_kind_of_cell == 'G' || map[next_x][next_y].what_kind_of_cell == '=')
+    || map[next_x][next_y].what_kind_of_cell == 'G' || map[next_x][next_y].what_kind_of_cell == '='
+    || map[next_x][next_y].what_kind_of_cell == 'T')
     {
         return 1;
     }
@@ -1433,6 +1493,7 @@ void tester_print(){
     }
     mvprintw(0,0,"%s",all_messages[message]); 
     mvprintw(0,50,"GOLD: %d" , gold);
+    mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
 
 void tester_discover(){
