@@ -72,6 +72,11 @@ int gold = 0;
 int window_y;
 int window_x;
 int spells[3] = {0};// 0:health  1:speed  2:damage
+int weapons[6] = {1,0,0,0,0,1};//0:mace  1:dagger  2:magic wand  3:normal arrow  4:sword  5:no weapon selected
+int range_of_weapons[6] = {0,5,10,5,0,0};
+int weapon_damage[6] = {5,12,15,5,10,0}; 
+int selected_weapon = 0;
+
 
 
 
@@ -99,6 +104,7 @@ void tester_discover();
 void move_hero();
 void fast_travel();
 void see_next_room();
+void weapon_menu();
 
 
 
@@ -153,6 +159,17 @@ int main(){
             {
                 break;
             }
+
+            else if (direction == 'w')
+            {
+                selected_weapon = 5;
+            }
+            else if (direction == 'i')
+            {
+                weapon_menu();
+            }
+            
+            
             move_hero(direction);
             clear();
             if (show_all_map)
@@ -225,7 +242,41 @@ int main(){
                 }else{
                     message = 10;
                 }
+            }else if (under_hero_kind == '?')
+            {
+                message = 11;
+                if (show_all_map)
+                {
+                    tester_print();
+                }else{
+                    print_map();
+                }
+                int get_weapon = getch();
+                if (get_weapon == 'y')
+                {
+                    int which_weapon = 1 + rand() % 4;
+                    if (which_weapon != 4){
+                        message = 11 + which_weapon;
+                        weapons[which_weapon] += (which_weapon + 1) * 5;
+                        if (which_weapon == 2)
+                            weapons[which_weapon] -= 7;
+                        
+                    }
+                    else{
+                        if (weapons[4])
+                            message = 16;
+                        else
+                            message = 15; 
+                        weapons[4] ++;
+                    }
+                    under_hero_color = 0;
+                    under_hero_kind = '.';
+                    
+                }else{
+                    message = 17;
+                }
             }
+            
             
             
             
@@ -244,12 +295,13 @@ int main(){
     endwin();
     return 0;
 }
-//----------------------- painting
+//------------------------------------------------------------- painting
 void pair_colors(){
     init_color(100,600,300,0);
     init_color(101,239,250,192);
     init_color(102,1000,8,863);
     init_color(103,1000,161,47);
+    init_color(104,200,98,400);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
@@ -266,9 +318,10 @@ void pair_colors(){
     init_pair(13,COLOR_BLACK,102); // health spell
     init_pair(14,COLOR_BLACK,COLOR_BLUE); // speed spell
     init_pair(15,COLOR_BLACK,103); // damage spell
+    init_pair(16,COLOR_YELLOW,104); // secret weapon
 }
 
-//-----------------------------------get informations
+//------------------------------------------------------------------get informations
 void get_informations(){
     num_users = 0;
     fptr = fopen("user_names.txt","r");
@@ -299,7 +352,7 @@ void get_informations(){
     fclose(fptr);
 }
 
-//---------------------------------first page
+//--------------------------------------------------------------------first page
 void which_page_to_go(int n){
     if (n == 0)
     {
@@ -399,7 +452,7 @@ int make_or_load_user(){
     which_page_to_go(which);
 }
 
-// ---------------------------------------- create user
+// ----------------------------------------------------------------- create user
 char random_char(const char *charset, int size) {
     return charset[rand() % size];
 }
@@ -650,7 +703,7 @@ void create_user(){
 
 
 
-//-------------------------------------login
+//-------------------------------------------------------------------------login
 void login(){
     int which_user;
     while (1) // to enter user name
@@ -737,7 +790,7 @@ void login(){
     game_menu();
 }
 
-// ------------------------------------ game menu
+// ----------------------------------------------------------------- game menu
 void game_menu(){
     int which = 0;
     while (1)
@@ -831,7 +884,7 @@ void game_menu(){
     } 
 }
 
-//---------------------------------------settings
+//-------------------------------------------------------------------settings
 void settings(){
     int which = 0;
     while (1) // difficuly settings
@@ -945,7 +998,7 @@ void settings(){
 }
 
 
-//----------------------------------initiallize map
+//----------------------------------------------------------------initiallize map
 void initialize_map(){
     for (int i = 0; i < MAP_WIDTH; i++)
     {
@@ -965,7 +1018,7 @@ void initialize_map(){
     
 }
 
-// ----------------------------------- print map
+// ----------------------------------------------------------------- print map
 void print_map(){
     for (int i = 0; i < MAP_WIDTH; i++)
     {
@@ -983,10 +1036,31 @@ void print_map(){
     }  
     mvprintw(0,0,"%s",all_messages[message]); 
     mvprintw(0,50,"GOLD: %d" , gold);
+    if (selected_weapon == 0)
+    {
+        mvprintw(0,60 , "WEAPON: MACE");
+    }else if (selected_weapon == 1)
+    {
+        mvprintw(0,60,"WEAPON: DAGGER");
+    }else if (selected_weapon == 2)
+    {
+        mvprintw(0,60,"WEAPON: MAGIC WAND");
+    }else if (selected_weapon == 3)
+    {
+        mvprintw(0,60,"WEAPON: NORMALL ARROW");
+    }else if (selected_weapon == 4)
+    {
+        mvprintw(0,60,"WEAPON: SWORD");
+    }else if (selected_weapon == 5)
+    {
+        mvprintw(0,60,"WEAPON: NOTHING");
+    }
+    
+    
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
 
-//--------------------------------random map generation
+//-------------------------------------------------------------random map generation
 int in_which_room(int x , int y){
     for (int i = 0; i < num_rooms; i++)
     {
@@ -1258,7 +1332,25 @@ void random_map_generate(){
         
     }
     
-    
+    //-----------------------------------weapon
+    int num_of_weapons;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_weapons = (rand() % (4)) - 2;
+        for (int j = 0; j < num_of_weapons; j++)
+        {
+            int weapon_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int weapon_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
+            int which_weapon = rand() % 4;
+            if (which_weapon == 0)
+            {
+                map[weapon_x][weapon_y].what_kind_of_cell = '?';
+                map[weapon_x][weapon_y].color = 16;
+            }
+            
+        }
+        
+    }
     
     
     //-----------------hero
@@ -1305,7 +1397,7 @@ void random_map_generate(){
     
 }
 
-//--------------------------------messages
+//----------------------------------------------------------------messages
 void set_messages(){
     strcpy(all_messages[0] , "You have entered a new floor.");
     strcpy(all_messages[1] , "You have entered a new room.");
@@ -1318,6 +1410,14 @@ void set_messages(){
     strcpy(all_messages[8], "You found a damage spell.");
     strcpy(all_messages[9],"Do you want to get the spell?");
     strcpy(all_messages[10],"You droped the spell!");
+    strcpy(all_messages[11],"Do you want to get the weapon?");
+    strcpy(all_messages[12],"You found 10 daggers.");
+    strcpy(all_messages[13],"You found 8 magics.");
+    strcpy(all_messages[14],"You found 20 normal arrows.");
+    strcpy(all_messages[15],"You found a sword.");
+    strcpy(all_messages[16],"Oops! You found a sword again.");
+    strcpy(all_messages[17],"You droped the weapon!");
+    
     for (int i = 0; i < 50; i++)
     {
         map[0][i].discover = 1;
@@ -1358,7 +1458,10 @@ void see_next_room(){
     
     discover_room(in_which_room(x,y));
 }
-//------------------------------------move
+
+
+
+//-----------------------------------------------------------------move
 int is_move_allowed(int direction){
     int next_x = hero_x;
     int next_y = hero_y;
@@ -1394,7 +1497,7 @@ int is_move_allowed(int direction){
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
     || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' 
     || map[next_x][next_y].what_kind_of_cell == 'G' || map[next_x][next_y].what_kind_of_cell == '='
-    || map[next_x][next_y].what_kind_of_cell == 'T')
+    || map[next_x][next_y].what_kind_of_cell == 'T' || map[next_x][next_y].what_kind_of_cell == '?')
     {
         return 1;
     }
@@ -1479,7 +1582,7 @@ void fast_travel(int direction){
     }
     
 }
-//----------------------------------tester
+//-------------------------------------------------------------------tester
 void tester_print(){
     for (int i = 0; i < MAP_WIDTH; i++)
     {
@@ -1493,6 +1596,25 @@ void tester_print(){
     }
     mvprintw(0,0,"%s",all_messages[message]); 
     mvprintw(0,50,"GOLD: %d" , gold);
+    if (selected_weapon == 0)
+    {
+        mvprintw(0,60 , "WEAPON: MACE");
+    }else if (selected_weapon == 1)
+    {
+        mvprintw(0,60,"WEAPON: DAGGER");
+    }else if (selected_weapon == 2)
+    {
+        mvprintw(0,60,"WEAPON: MAGIC WAND");
+    }else if (selected_weapon == 3)
+    {
+        mvprintw(0,60,"WEAPON: NORMALL ARROW");
+    }else if (selected_weapon == 4)
+    {
+        mvprintw(0,60,"WEAPON: SWORD");
+    }else if (selected_weapon == 5)
+    {
+        mvprintw(0,60,"WEAPON: NOTHING");
+    }
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
 
@@ -1506,6 +1628,103 @@ void tester_discover(){
         
     }
 }
+
+
+//--------------------------------------------------------------------weapon
+
+void weapon_menu(){
+    while (1)
+    {
+        clear();
+        attron(A_BOLD);
+        mvprintw(0,0,"WEAPON MENU");
+        attroff(A_BOLD);
+        mvprintw(5,0,"SHORT RANGE WEAPONS:");
+        mvprintw(6,5,"Mace                 damage: %d    ammo count: %d   (click m to choose)" , weapon_damage[0] , weapons[0]);
+        mvprintw(7,5,"Sword                damage: %d    ammo count: %d   (click s to choose)" , weapon_damage[4] , weapons[4]);
+        mvprintw(10,0,"LONG RANGE WEAPONS:");
+        mvprintw(11,5,"Dagger              damage: %d    range: %d    ammo count: %d   (click d to choose)", weapon_damage[1] , range_of_weapons[1],weapons[1]);
+        mvprintw(12,5,"Magic wand          damage: %d    range: %d    ammo count: %d   (click w to choose)", weapon_damage[2] , range_of_weapons[2] , weapons[2]);
+        mvprintw(13,5,"normal arrow        damage: %d    range: %d    ammo count: %d   (click a to choose)", weapon_damage[3] , range_of_weapons[3] , weapons[3]);
+        int choosen_weapon = getch();
+        if (choosen_weapon == 'm' || choosen_weapon == 's' || choosen_weapon == 'd' 
+        || choosen_weapon == 'w'  || choosen_weapon == 'a')
+        {
+            if (selected_weapon == 5)
+            {
+                int success = 1;
+                if (choosen_weapon == 'm')
+                    selected_weapon = 0;
+                else if(choosen_weapon == 's'){
+                    if (weapons[4])
+                    {
+                       selected_weapon = 4; 
+                    }else{
+                        attron(COLOR_PAIR(2));
+                        mvprintw(20,0,"You have not that weapon");
+                        attroff(COLOR_PAIR(2));
+                        success = 0;
+                    }
+                }
+                    
+                else if (choosen_weapon == 'd'){
+                    if (weapons[1])
+                    {
+                       selected_weapon = 1; 
+                    }else{
+                        attron(COLOR_PAIR(2));
+                        mvprintw(20,0,"You have not that weapon");
+                        attroff(COLOR_PAIR(2));
+                        success = 0;
+                    }
+                }
+                else if (choosen_weapon == 'w'){
+                    if (weapons[2])
+                    {
+                       selected_weapon = 2; 
+                    }else{
+                        attron(COLOR_PAIR(2));
+                        mvprintw(20,0,"You have not that weapon");
+                        attroff(COLOR_PAIR(2));
+                        success = 0;
+                    }
+                }
+                else if(choosen_weapon == 'a'){
+                    if (weapons[3])
+                    {
+                       selected_weapon = 3; 
+                    }else{
+                        attron(COLOR_PAIR(2));
+                        mvprintw(20,0,"You have not that weapon");
+                        attroff(COLOR_PAIR(2));
+                        success = 0;
+                    }
+                }
+                if (success)
+                {
+                    attron(COLOR_PAIR(3));
+                    mvprintw(20,0,"Your defult weapon changed success fully");
+                    attroff(COLOR_PAIR(3));
+                }
+                
+            }else{
+               attron(COLOR_PAIR(2));
+                mvprintw(20 , 0 , "First put your perevious weapon in your backpack.");
+                attroff(COLOR_PAIR(2));
+            }
+            getch();
+            break;
+        }else{
+            attron(COLOR_PAIR(2));
+            mvprintw(20 , 0 , "please enter something between {m,s,d,w,a}");
+            attroff(COLOR_PAIR(2));
+            getch();
+        }
+        
+    }
+    
+}
+
 //------------------------------- not developed yet
 
 
