@@ -21,6 +21,9 @@
 #define MAX_ROOM_NUMBER 9
 #define MAP_WIDTH 30
 #define MAP_LENTGH 120
+#define SPELL_TIME 10
+#define MAX_HEALTH 1000
+#define MAX_HUNGER 1000
 
 
 //------------------------------structs
@@ -43,7 +46,7 @@ typedef struct
 
 //------------------------------variables
 int message = 0; 
-char all_messages[20][50];
+char all_messages[50][75];
 int num_users;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
@@ -76,8 +79,14 @@ int weapons[6] = {1,0,0,0,0,1};//0:mace  1:dagger  2:magic wand  3:normal arrow 
 int range_of_weapons[6] = {0,5,10,5,0,0};
 int weapon_damage[6] = {5,12,15,5,10,0}; 
 int selected_weapon = 0;
-
-
+int game_times[10] = {0}; // 0:game time,1:last_food,2:health spell,3:speed spell,4:damage spell
+int health = MAX_HEALTH;
+int hunger_level = MAX_HUNGER;
+int foods[5] = {0};// 0: no food ,<30:rotten food , <80:normal food , <100 odd: magic food ,<100 even: excellent food
+char my_food[5][20] = {"nothing" , "nothing","nothing","nothing","nothing"};
+char normal_foods[5][20] = {"Bread & Butter","Apple Pie","Roasted Chicken","Spaghetti","Vegetable Soup"};
+char magic_foods[5][20] = {"Phoenix Feather","Dragon's Egg","Enchanted Mushroom","Goblin Stew","Elf Fruit Salad"};
+char excellent_foods[5][20] = {"Ghormeh Sabzi","Lobster Thermidor","Caviar","Steak","Lasagna"};
 
 
 //------------------------------functions
@@ -105,6 +114,10 @@ void move_hero();
 void fast_travel();
 void see_next_room();
 void weapon_menu();
+void hunger_and_health_menu();
+void use_spell(int spell);
+void passage_time();
+void double_move(int direction);
 
 
 
@@ -138,6 +151,7 @@ int main(){
         while (i)
         {
             direction = getch();
+            //show all map
             if (direction == 'M')
             {
                 if (show_all_map)
@@ -147,30 +161,73 @@ int main(){
                     show_all_map = 1;
                 
             }
-            
+            // fast travel
             else if (direction == 'f')
             {
                 direction = getch();
                 fast_travel(direction);
             }
+            //spells
+            else if (direction == 'H')
+            {
+                if (spells[0])
+                {
+                    spells[0] -- ;
+                    game_times[2] = game_times[0];
+                    message = 22;
+                }else
+                    message = 25;  
+            }
+            else if (direction == 'S')
+            {
+                if (spells[1])
+                {
+                    spells[1] -- ;
+                    game_times[3] = game_times[0];
+                    message = 23;
+                }else
+                    message = 25;  
+            }
+            else if (direction == 'D')
+            {
+                if (spells[2])
+                {
+                    spells[2] -- ;
+                    game_times[4] = game_times[0];
+                    message = 24;
+                }else
+                    message = 25;  
+            }
             
             
+            // quit
             else if (direction == 'q')
             {
                 break;
             }
-
+            // put weapon in pack
             else if (direction == 'w')
             {
                 selected_weapon = 5;
             }
-            else if (direction == 'i')
+            // weapon menu
+            else if (direction == 'I')
             {
                 weapon_menu();
             }
+            // hunger menu
+            else if (direction == 'E')
+            {
+                hunger_and_health_menu();
+            }
+            // move
+            if (game_times[0] - game_times[3] < SPELL_TIME * 2)
+            {
+                double_move(direction);
+            }else
+                move_hero(direction);
             
-            
-            move_hero(direction);
+            // print
             clear();
             if (show_all_map)
             {
@@ -179,6 +236,7 @@ int main(){
                 print_map();
             }
 
+            //stairs
             if (under_hero_kind == '/' && under_hero_color == 7)
             {
                 int go_to_next_floor = getch();
@@ -188,7 +246,9 @@ int main(){
                     break;
                 }
                 
-            }else if (under_hero_kind == 'G')
+            }
+            //gold
+            else if (under_hero_kind == 'G')
             {
                 message = 4;
                 clear();
@@ -213,7 +273,9 @@ int main(){
                 }else{
                     message = 5;
                 }
-            }else if (under_hero_kind == '=')
+            }
+            //window
+            else if (under_hero_kind == '=')
             {
                 see_next_room();
                 clear();
@@ -223,7 +285,9 @@ int main(){
                 }else{
                     print_map();
                 }
-            }else if (under_hero_kind == 'T')
+            }
+            // spell
+            else if (under_hero_kind == 'T')
             {
                 message = 9;
                 if (show_all_map)
@@ -242,7 +306,9 @@ int main(){
                 }else{
                     message = 10;
                 }
-            }else if (under_hero_kind == '?')
+            }
+            // weapon
+            else if (under_hero_kind == '?')
             {
                 message = 11;
                 if (show_all_map)
@@ -276,6 +342,54 @@ int main(){
                     message = 17;
                 }
             }
+            //food
+            else if (under_hero_kind == 'F')
+            {
+                message = 18;
+                if (show_all_map)
+                {
+                    tester_print();
+                }else{
+                    print_map();
+                }
+                int get_spell = getch();
+                if (get_spell == 'y')
+                {
+                    int free_plate = 0;
+                    for (free_plate = 0; free_plate < 5; free_plate++)
+                    {
+                        if (foods[free_plate] == 0)
+                            break;
+                    }
+                    if (free_plate == 5)
+                    {
+                        message = 21;
+                    }else{
+                        foods[free_plate] = 1 + rand() % 100;
+                        if (foods[free_plate] == 0)
+                        {
+                            strcpy(my_food[free_plate],"nothing");
+                        }else if (foods[free_plate] <= 80 && foods[free_plate] > 0)
+                        {
+                            strcpy(my_food[free_plate],normal_foods[rand() % 5]);
+                        }else if (foods[free_plate] % 2 == 1 && foods[free_plate] > 80)
+                        {
+                            strcpy(my_food[free_plate],magic_foods[rand() % 5]);
+                        }else if (foods[free_plate] %2 == 0 && foods[free_plate] > 80)
+                        {
+                            strcpy(my_food[free_plate],excellent_foods[rand() % 5]);
+                        }
+                        under_hero_kind = '.';
+                        under_hero_color = 0;
+                        message = 19;
+                    }
+                    
+                    
+                }else{
+                    message = 20;
+                }
+            }
+            
             
             
             
@@ -302,6 +416,9 @@ void pair_colors(){
     init_color(102,1000,8,863);
     init_color(103,1000,161,47);
     init_color(104,200,98,400);
+    init_color(105,310,310,310);
+    init_color(106,67,788,27);
+    init_color(107,902,851,459);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
@@ -319,6 +436,12 @@ void pair_colors(){
     init_pair(14,COLOR_BLACK,COLOR_BLUE); // speed spell
     init_pair(15,COLOR_BLACK,103); // damage spell
     init_pair(16,COLOR_YELLOW,104); // secret weapon
+    init_pair(17,105,105); // empty part of health
+    init_pair(18,COLOR_GREEN,COLOR_GREEN);
+    init_pair(19,COLOR_YELLOW,COLOR_YELLOW);
+    init_pair(20,COLOR_RED,COLOR_RED);
+    init_pair(21,COLOR_BLACK , COLOR_MAGENTA);
+    init_pair(22,106,107);// food
 }
 
 //------------------------------------------------------------------get informations
@@ -1035,25 +1158,25 @@ void print_map(){
         }
     }  
     mvprintw(0,0,"%s",all_messages[message]); 
-    mvprintw(0,50,"GOLD: %d" , gold);
+    mvprintw(0,75,"GOLD: %d" , gold);
     if (selected_weapon == 0)
     {
-        mvprintw(0,60 , "WEAPON: MACE");
+        mvprintw(0,85 , "WEAPON: MACE");
     }else if (selected_weapon == 1)
     {
-        mvprintw(0,60,"WEAPON: DAGGER");
+        mvprintw(0,85,"WEAPON: DAGGER");
     }else if (selected_weapon == 2)
     {
-        mvprintw(0,60,"WEAPON: MAGIC WAND");
+        mvprintw(0,85,"WEAPON: MAGIC WAND");
     }else if (selected_weapon == 3)
     {
-        mvprintw(0,60,"WEAPON: NORMALL ARROW");
+        mvprintw(0,85,"WEAPON: NORMALL ARROW");
     }else if (selected_weapon == 4)
     {
-        mvprintw(0,60,"WEAPON: SWORD");
+        mvprintw(0,85,"WEAPON: SWORD");
     }else if (selected_weapon == 5)
     {
-        mvprintw(0,60,"WEAPON: NOTHING");
+        mvprintw(0,85,"WEAPON: NOTHING");
     }
     
     
@@ -1336,22 +1459,31 @@ void random_map_generate(){
     int num_of_weapons;
     for (int i = 0; i < num_rooms; i++)
     {
-        num_of_weapons = (rand() % (4)) - 2;
+        num_of_weapons = (rand() % (4)) - 2; // no matter what is difficulty
         for (int j = 0; j < num_of_weapons; j++)
         {
             int weapon_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
             int weapon_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
-            int which_weapon = rand() % 4;
-            if (which_weapon == 0)
-            {
-                map[weapon_x][weapon_y].what_kind_of_cell = '?';
-                map[weapon_x][weapon_y].color = 16;
-            }
+            map[weapon_x][weapon_y].what_kind_of_cell = '?';
+            map[weapon_x][weapon_y].color = 16;
             
         }
-        
     }
-    
+
+    //-----------------food
+    int num_of_foods;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_foods = (rand() % (3)) - 1; // no matter what is difficulty
+        for (int j = 0; j < num_of_foods; j++)
+        {
+            int food_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int food_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
+            map[food_x][food_y].what_kind_of_cell = 'F';
+            map[food_x][food_y].color = 22;
+            
+        }
+    }
     
     //-----------------hero
     if (which_floor == 0)
@@ -1417,6 +1549,14 @@ void set_messages(){
     strcpy(all_messages[15],"You found a sword.");
     strcpy(all_messages[16],"Oops! You found a sword again.");
     strcpy(all_messages[17],"You droped the weapon!");
+    strcpy(all_messages[18],"Do you want to get the food?");
+    strcpy(all_messages[19],"You found some food.");
+    strcpy(all_messages[20],"You droped the food!");
+    strcpy(all_messages[21],"You don't have enough space for a new food.");
+    strcpy(all_messages[22],"The celestial healers have descended upon the earth once more.");
+    strcpy(all_messages[23],"You used the speed spell. The world slows down in your eyes.");
+    strcpy(all_messages[24],"The damage spell will lead you to certain victory.");
+    strcpy(all_messages[25],"You have not the spell.");
     
     for (int i = 0; i < 50; i++)
     {
@@ -1497,7 +1637,8 @@ int is_move_allowed(int direction){
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
     || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' 
     || map[next_x][next_y].what_kind_of_cell == 'G' || map[next_x][next_y].what_kind_of_cell == '='
-    || map[next_x][next_y].what_kind_of_cell == 'T' || map[next_x][next_y].what_kind_of_cell == '?')
+    || map[next_x][next_y].what_kind_of_cell == 'T' || map[next_x][next_y].what_kind_of_cell == '?'
+    || map[next_x][next_y].what_kind_of_cell == 'F')
     {
         return 1;
     }
@@ -1571,8 +1712,14 @@ void move_hero(int direction){
             
             discover_room(in_which_room(hero_x,hero_y));
         }
+        passage_time();
         
     }  
+}
+
+void double_move(int direction){
+    move_hero(direction);
+    move_hero(direction);
 }
 
 void fast_travel(int direction){
@@ -1595,25 +1742,25 @@ void tester_print(){
         
     }
     mvprintw(0,0,"%s",all_messages[message]); 
-    mvprintw(0,50,"GOLD: %d" , gold);
+    mvprintw(0,75,"GOLD: %d" , gold);
     if (selected_weapon == 0)
     {
-        mvprintw(0,60 , "WEAPON: MACE");
+        mvprintw(0,85 , "WEAPON: MACE");
     }else if (selected_weapon == 1)
     {
-        mvprintw(0,60,"WEAPON: DAGGER");
+        mvprintw(0,85,"WEAPON: DAGGER");
     }else if (selected_weapon == 2)
     {
-        mvprintw(0,60,"WEAPON: MAGIC WAND");
+        mvprintw(0,85,"WEAPON: MAGIC WAND");
     }else if (selected_weapon == 3)
     {
-        mvprintw(0,60,"WEAPON: NORMALL ARROW");
+        mvprintw(0,85,"WEAPON: NORMALL ARROW");
     }else if (selected_weapon == 4)
     {
-        mvprintw(0,60,"WEAPON: SWORD");
+        mvprintw(0,85,"WEAPON: SWORD");
     }else if (selected_weapon == 5)
     {
-        mvprintw(0,60,"WEAPON: NOTHING");
+        mvprintw(0,85,"WEAPON: NOTHING");
     }
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
@@ -1714,7 +1861,12 @@ void weapon_menu(){
             }
             getch();
             break;
-        }else{
+        }else if (choosen_weapon == 'q')
+        {
+            break;
+        }
+        
+        else{
             attron(COLOR_PAIR(2));
             mvprintw(20 , 0 , "please enter something between {m,s,d,w,a}");
             attroff(COLOR_PAIR(2));
@@ -1722,6 +1874,183 @@ void weapon_menu(){
         }
         
     }
+    
+}
+
+//---------------------------------------------------------------------food
+void hunger_and_health_menu(){
+    while (1)
+    {
+        clear();
+        mvprintw(2,0,"HEALTH: ");
+        mvprintw(4,0,"HUNGER LEVEL: ");
+        attron(COLOR_PAIR(17));
+        for (int i = 0; i < 100; i++)
+        {
+            mvprintw(2,i+15," ");
+            mvprintw(4,i+15 ," ");
+        }
+        attroff(COLOR_PAIR(17));
+        
+        if (health > 3 * MAX_HEALTH / 4)
+        {
+            attron(COLOR_PAIR(18));
+            for (int i = 0; i < health * 100 / MAX_HEALTH; i++)
+            {
+                mvprintw(2,i+15," ");
+            }
+            attroff(COLOR_PAIR(18));
+        }
+        else if (health >= MAX_HEALTH / 2)
+        {
+            attron(COLOR_PAIR(19));
+            for (int i = 0; i < health * 100 / MAX_HEALTH; i++)
+            {
+                mvprintw(2,i+15," ");
+            }
+            attroff(COLOR_PAIR(19));
+        }else{
+            attron(COLOR_PAIR(20));
+            for (int i = 0; i < health * 100 / MAX_HEALTH; i++)
+            {
+                mvprintw(2,i+15," ");
+            }
+            attroff(COLOR_PAIR(20));
+        }
+
+        if (hunger_level > 3 * MAX_HUNGER / 4)
+        {
+            attron(COLOR_PAIR(18));
+            for (int i = 0; i < hunger_level * 100 / MAX_HUNGER; i++)
+            {
+                mvprintw(4,i+15," ");
+            }
+            attroff(COLOR_PAIR(18));
+        }
+        else if (hunger_level >= MAX_HEALTH /2)
+        {
+            attron(COLOR_PAIR(19));
+            for (int i = 0; i < hunger_level * 100 / MAX_HUNGER; i++)
+            {
+                mvprintw(4,i+15," ");
+            }
+            attroff(COLOR_PAIR(19));
+        }else{
+            attron(COLOR_PAIR(20));
+            for (int i = 0; i < hunger_level * 100 / MAX_HUNGER; i++)
+            {
+                mvprintw(4,i+15," ");
+            }
+            attroff(COLOR_PAIR(20));
+        }
+        
+        
+        attron(A_BOLD);
+        mvprintw(7,0,"FOODS: ");
+        for (int i = 0; i < 5; i++)
+        {
+            mvprintw(8+i,9,"%s",my_food[i]);
+        }
+        
+        attroff(A_BOLD);
+        int which_food = getch();
+        if (which_food == 'q')
+        {
+            break;
+        }else if (which_food >= '1' && which_food <= '5')
+        {
+            which_food -= '1';
+            attron(COLOR_PAIR(21));
+            if (foods[which_food])
+            {
+                if (foods[which_food] <= 30)
+                {
+                    mvprintw(20,0,"You have unknowingly consumed a fatal toxin. The clock is ticking.");
+                    health -= (3 - difficulty) * 10;
+                    if (hunger_level > MAX_HUNGER - (difficulty + 1) * 5)
+                    {
+                        hunger_level = MAX_HUNGER;
+                    }else{
+                        hunger_level += (MAX_HUNGER + 1) * 5;
+                    }
+                    
+                }else if (foods[which_food] <= 80)
+                {
+                    health = MAX_HEALTH;
+                    if (hunger_level > MAX_HUNGER - (difficulty + 1) * 10)
+                    {
+                        hunger_level =  MAX_HUNGER;
+                    }else{
+                        hunger_level += (difficulty + 1) * 10;
+                    }
+                    
+                    mvprintw(20,0,"You ate some food.");
+                }else if (foods[which_food] % 2 == 1)
+                {
+                    health = MAX_HEALTH;
+                    if (hunger_level > MAX_HUNGER - (3 - difficulty) * 10)
+                    {
+                        hunger_level = 100;
+                    }else
+                        hunger_level += (3 - difficulty) * 10;
+
+                    
+                    mvprintw(20,0,"You partook of a fabled repast, and now the speed of legends courses through your veins.");
+                    // use_spell(1);
+                }else if (foods[which_food] % 2 == 0)
+                {
+                    health = MAX_HEALTH;
+                    if (hunger_level > 100 - (difficulty + 1) * 10)
+                    {
+                        hunger_level = MAX_HUNGER;
+                    }else
+                        hunger_level += (difficulty + 1) * 10;
+                    
+                    mvprintw(20,0,"You have tasted the pinnacle of earthly cuisine, and now possess a power that will etch your name into the annals of history!");
+                    // use_spell(2);
+                }
+                
+                
+                strcpy(my_food[which_food],"nothing");
+                foods[which_food] = 0;
+            }else{
+                mvprintw(20,0,"You decided not to eat anything");
+            }
+            attroff(COLOR_PAIR(21));
+            getch();
+            break;
+        }else{
+            attron(COLOR_PAIR(2));
+            mvprintw(20,0,"Please enter something between 1 and 5");
+            attroff(COLOR_PAIR(2));
+        }
+        
+        
+
+    }
+    
+}
+
+//----------------------------------------------------------------------time
+void passage_time(){
+    game_times[0] ++;
+    hunger_level -= 4;
+    if (hunger_level <= MAX_HUNGER / 4)
+    {
+        health -= 4;
+    }if (hunger_level > MAX_HUNGER / 2)
+    {
+        if (health > MAX_HEALTH - 2 * (1 + difficulty))
+        {
+            health = MAX_HEALTH;
+        }else
+            health += 2 * (1 + difficulty); 
+    }
+    if (game_times[0] - game_times[2] < SPELL_TIME)
+    {
+        health += (1 + difficulty);
+    }
+    
     
 }
 
