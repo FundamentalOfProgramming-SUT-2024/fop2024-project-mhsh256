@@ -24,6 +24,7 @@
 #define SPELL_TIME 10
 #define MAX_HEALTH 1000
 #define MAX_HUNGER 1000
+#define ENEMY_DAMAGE 40 //undead damage
 
 
 //------------------------------structs
@@ -33,6 +34,7 @@ typedef struct
     char what_kind_of_cell;
     int discover;
     int color;
+    int lost_weapons[5];
 }Cell;
 
 typedef struct 
@@ -42,6 +44,12 @@ typedef struct
     int connecting_rooms[10];
     int theme;
 }Room;
+
+typedef struct 
+{
+    int x , y,helth,damage,kind;
+    char name[30];
+}Enemy;
 
 
 //------------------------------variables
@@ -87,6 +95,9 @@ char my_food[5][20] = {"nothing" , "nothing","nothing","nothing","nothing"};
 char normal_foods[5][20] = {"Bread & Butter","Apple Pie","Roasted Chicken","Spaghetti","Vegetable Soup"};
 char magic_foods[5][20] = {"Phoenix Feather","Dragon's Egg","Enchanted Mushroom","Goblin Stew","Elf Fruit Salad"};
 char excellent_foods[5][20] = {"Ghormeh Sabzi","Lobster Thermidor","Caviar","Steak","Lasagna"};
+Enemy monsters[100];
+int all_enemies = 1;
+int where_are_enemies[MAP_WIDTH][MAP_LENTGH] = {0};
 
 
 //------------------------------functions
@@ -118,6 +129,7 @@ void hunger_and_health_menu();
 void use_spell(int spell);
 void passage_time();
 void double_move(int direction);
+void attack();
 
 
 
@@ -136,6 +148,7 @@ int main(){
     make_or_load_user();
     
     clear();
+    game_times[0] = SPELL_TIME * 3;
     for (int i = 1; i < 5; i++)
     {
         initialize_map();
@@ -199,6 +212,13 @@ int main(){
                     message = 25;  
             }
             
+
+            //attack enemies
+            else if (direction == ' ')
+            {
+                attack();
+            }
+            
             
             // quit
             else if (direction == 'q')
@@ -248,7 +268,7 @@ int main(){
                 
             }
             //gold
-            else if (under_hero_kind == 'G')
+            else if (under_hero_kind == 'g')
             {
                 message = 4;
                 clear();
@@ -343,7 +363,7 @@ int main(){
                 }
             }
             //food
-            else if (under_hero_kind == 'F')
+            else if (under_hero_kind == 'f')
             {
                 message = 18;
                 if (show_all_map)
@@ -419,6 +439,8 @@ void pair_colors(){
     init_color(105,310,310,310);
     init_color(106,67,788,27);
     init_color(107,902,851,459);
+    init_color(108,1000,980,980);
+    init_color(109,627,321,176);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
@@ -442,6 +464,7 @@ void pair_colors(){
     init_pair(20,COLOR_RED,COLOR_RED);
     init_pair(21,COLOR_BLACK , COLOR_MAGENTA);
     init_pair(22,106,107);// food
+    init_pair(23,108,109);// enemy
 }
 
 //------------------------------------------------------------------get informations
@@ -1132,6 +1155,11 @@ void initialize_map(){
             map[i][j].what_kind_of_cell = ' ';
             map[i][j].discover = 0;
             map[i][j].color = 0;
+            for (int t = 0; t < 5; t++)
+            {
+                map[i][j].lost_weapons[t] = 0;
+            }
+            
         }
     }
     for (int i = 0; i < 9; i++)
@@ -1178,7 +1206,7 @@ void print_map(){
     {
         mvprintw(0,85,"WEAPON: NOTHING");
     }
-    
+    mvprintw(0,120,"HEALTH: %d" , health/10);
     
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
@@ -1426,8 +1454,8 @@ void random_map_generate(){
         for (int j = 0; j < num_of_golds; j++)
         {
             int gold_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
-            int gold_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
-            map[gold_x][gold_y].what_kind_of_cell = 'G';
+            int gold_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
+            map[gold_x][gold_y].what_kind_of_cell = 'g';
             map[gold_x][gold_y].color = 9;
             int black_gold = rand()%10;
             if (black_gold == 1)
@@ -1447,7 +1475,7 @@ void random_map_generate(){
         for (int j = 0; j < num_of_spells - 1; j++)
         {
             int spell_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
-            int spell_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
+            int spell_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
             map[spell_x][spell_y].what_kind_of_cell = 'T';
             int spell_color = 13 + rand() % 3;
             map[spell_x][spell_y].color = spell_color;
@@ -1463,7 +1491,7 @@ void random_map_generate(){
         for (int j = 0; j < num_of_weapons; j++)
         {
             int weapon_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
-            int weapon_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
+            int weapon_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
             map[weapon_x][weapon_y].what_kind_of_cell = '?';
             map[weapon_x][weapon_y].color = 16;
             
@@ -1478,13 +1506,64 @@ void random_map_generate(){
         for (int j = 0; j < num_of_foods; j++)
         {
             int food_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
-            int food_y = rooms[i].y + 1 + rand()%(rooms[i].width - 2);
-            map[food_x][food_y].what_kind_of_cell = 'F';
+            int food_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
+            map[food_x][food_y].what_kind_of_cell = 'f';
             map[food_x][food_y].color = 22;
             
         }
     }
     
+
+    //-----------------enemy
+    int num_of_enemies;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_enemies = rand() % 3; // no matter what is difficulty
+        for (int j = 0; j < num_of_enemies; j++)
+        {
+            int enemy_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int enemy_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
+            map[enemy_x][enemy_y].color = 23;
+            monsters[all_enemies].x = enemy_x;
+            monsters[all_enemies].y = enemy_y;
+            int kind_of_enemy = rand() % 5;
+            monsters[all_enemies].kind = kind_of_enemy;
+            where_are_enemies[enemy_x][enemy_y] = all_enemies;
+            if (kind_of_enemy == 0)
+            {
+                map[enemy_x][enemy_y].what_kind_of_cell = 'D';
+                monsters[all_enemies].helth = 5;
+                strcpy(monsters[all_enemies].name , "Demon");
+                monsters[all_enemies].damage = ENEMY_DAMAGE / 4;
+            }else if (kind_of_enemy == 1)
+            {
+                map[enemy_x][enemy_y].what_kind_of_cell = 'F';
+                monsters[all_enemies].helth = 10;
+                strcpy(monsters[all_enemies].name , "Fire Breathing Monster");
+                monsters[all_enemies].damage = ENEMY_DAMAGE / 2;
+            }else if (kind_of_enemy == 2)
+            {
+                map[enemy_x][enemy_y].what_kind_of_cell = 'G';
+                monsters[all_enemies].helth = 15;
+                strcpy(monsters[all_enemies].name , "Giant");
+                monsters[all_enemies].damage = ENEMY_DAMAGE / 3;
+            }else if (kind_of_enemy == 3)
+            {
+                map[enemy_x][enemy_y].what_kind_of_cell = 'S';
+                monsters[all_enemies].helth = 20;
+                strcpy(monsters[all_enemies].name , "Snake");
+                monsters[all_enemies].damage = ENEMY_DAMAGE * 5 / 4;
+            }else if (kind_of_enemy == 4)
+            {
+                map[enemy_x][enemy_y].what_kind_of_cell = 'U';
+                monsters[all_enemies].helth = 30;
+                strcpy(monsters[all_enemies].name , "Undead");
+                monsters[all_enemies].damage = ENEMY_DAMAGE;
+            } 
+            all_enemies ++;
+        }
+    }
+
     //-----------------hero
     if (which_floor == 0)
     {
@@ -1557,11 +1636,11 @@ void set_messages(){
     strcpy(all_messages[23],"You used the speed spell. The world slows down in your eyes.");
     strcpy(all_messages[24],"The damage spell will lead you to certain victory.");
     strcpy(all_messages[25],"You have not the spell.");
+    strcpy(all_messages[26],"Attacking monsters barehanded isn't a good idea.");
+    strcpy(all_messages[27],"You have slain an enemy!");
+    strcpy(all_messages[28],"You hit the enemy.");
+    strcpy(all_messages[29],"You did not hit anything.");
     
-    for (int i = 0; i < 50; i++)
-    {
-        map[0][i].discover = 1;
-    }
     
 }
 
@@ -1599,7 +1678,293 @@ void see_next_room(){
     discover_room(in_which_room(x,y));
 }
 
+void kill_enemy(int x , int y){
+    where_are_enemies[x][y] = 0;
+    message = 27;
+    map[x][y].what_kind_of_cell = '.';
+    map[x][y].color = 0;
+}
 
+void hit_enemy(int power , int x , int y){
+    monsters[where_are_enemies[x][y]].helth -= power;
+    if (game_times[0]-game_times[4] < SPELL_TIME)
+    {
+        monsters[where_are_enemies[x][y]].helth -= power;
+    }
+    message = 28;
+    
+    if (monsters[where_are_enemies[x][y]].helth <= 0)
+    {
+        kill_enemy(x,y);
+    }
+    
+}
+
+void attack(){
+    if (selected_weapon == 5)// nothing
+    {
+        message = 26;
+    }else if (selected_weapon == 0)// mace
+    {
+        int hit = 0;
+        for (int i = -1; i < 2; i++)
+        {
+            for (int j = -1; j < 2; j++)
+            {
+                if (j == 0 && i == 0)
+                {
+                    continue;
+                }
+                if (where_are_enemies[hero_x + i][hero_y + j])
+                {
+                    hit_enemy(5,hero_x+i,hero_y+j);
+                    hit ++;
+                }
+                
+            }
+            
+        }
+        
+        if (hit == 0)
+        {
+            message = 29;
+        }
+        
+        
+    }else if (selected_weapon == 1)// dagger
+    {
+        int direction = getch();
+        weapons[selected_weapon]--;
+        if (weapons[selected_weapon] == 0)
+        {
+            selected_weapon = 5;
+        }
+        
+        int dis_x , dis_y;
+        if (direction == '9')
+        {
+            dis_x = -1;
+            dis_y = 1;    
+        }else if (direction == '8')
+        {
+            dis_x = -1;
+            dis_y = 0;
+        }else if (direction == '7')
+        {
+            dis_x = -1;
+            dis_y = -1;
+        }else if (direction == '6')
+        {
+            dis_x = 0;
+            dis_y = 1;
+        }else if (direction == '4')
+        {
+            dis_x = 0;
+            dis_y = -1;
+        }else if (direction == '3')
+        {
+            dis_x = 1;
+            dis_y = 1;
+        }else if (direction == '2')
+        {
+            dis_x = 1;
+            dis_y = 0;
+        }else if (direction == '1')
+        {
+            dis_x = 1;
+            dis_y = -1;
+        }  
+        int next_x = hero_x + dis_x;
+        int next_y = hero_y + dis_y;
+        int damage = 12;
+        int range = 5;
+        if (map[next_x][next_y].what_kind_of_cell != '_' && map[next_x][next_y].what_kind_of_cell != '|' &&
+        direction <= '9' && direction >= '1' && direction != '5')
+        {
+            for (int i = 0; i < range; i++)
+            {
+                if (where_are_enemies[next_x][next_y])
+                {
+                    hit_enemy(12,next_x,next_y);
+                    
+                }else if (map[next_x][next_y].what_kind_of_cell == '_' || map[next_x][next_y].what_kind_of_cell == '|')
+                {
+                    map[next_x-dis_x][next_y-dis_y].lost_weapons[1] ++;
+                    break;
+                }
+                
+                next_x += dis_x;
+                next_y += dis_y;
+                
+           }
+        }
+        
+        
+    }else if (selected_weapon == 2)// magic wand
+    {
+        int direction = getch();
+        weapons[selected_weapon]--;
+        if (weapons[selected_weapon] == 0)
+        {
+            selected_weapon = 5;
+        }
+        int dis_x , dis_y;
+        if (direction == '9')
+        {
+            dis_x = -1;
+            dis_y = 1;    
+        }else if (direction == '8')
+        {
+            dis_x = -1;
+            dis_y = 0;
+        }else if (direction == '7')
+        {
+            dis_x = -1;
+            dis_y = -1;
+        }else if (direction == '6')
+        {
+            dis_x = 0;
+            dis_y = 1;
+        }else if (direction == '4')
+        {
+            dis_x = 0;
+            dis_y = -1;
+        }else if (direction == '3')
+        {
+            dis_x = 1;
+            dis_y = 1;
+        }else if (direction == '2')
+        {
+            dis_x = 1;
+            dis_y = 0;
+        }else if (direction == '1')
+        {
+            dis_x = 1;
+            dis_y = -1;
+        }  
+        int next_x = hero_x + dis_x;
+        int next_y = hero_y + dis_y;
+        int damage = 15;
+        int range = 10;
+        if (map[next_x][next_y].what_kind_of_cell != '_' && map[next_x][next_y].what_kind_of_cell != '|' &&
+        direction <= '9' && direction >= '1' && direction != '5')
+        {
+            for (int i = 0; i < range; i++)
+            {
+                if (where_are_enemies[next_x][next_y])
+                {
+                    hit_enemy(15,next_x,next_y);
+                    
+                }else if (map[next_x][next_y].what_kind_of_cell == '_' || map[next_x][next_y].what_kind_of_cell == '|')
+                {
+                    map[next_x-dis_x][next_y-dis_y].lost_weapons[2] ++;
+                    break;
+                }
+                
+                next_x += dis_x;
+                next_y += dis_y;
+                
+           }
+        }
+    }else if (selected_weapon == 3)// normal arrow
+    {
+        int direction = getch();
+        weapons[selected_weapon]--;
+        if (weapons[selected_weapon] == 0)
+        {
+            selected_weapon = 5;
+        }
+        int dis_x , dis_y;
+        if (direction == '9')
+        {
+            dis_x = -1;
+            dis_y = 1;    
+        }else if (direction == '8')
+        {
+            dis_x = -1;
+            dis_y = 0;
+        }else if (direction == '7')
+        {
+            dis_x = -1;
+            dis_y = -1;
+        }else if (direction == '6')
+        {
+            dis_x = 0;
+            dis_y = 1;
+        }else if (direction == '4')
+        {
+            dis_x = 0;
+            dis_y = -1;
+        }else if (direction == '3')
+        {
+            dis_x = 1;
+            dis_y = 1;
+        }else if (direction == '2')
+        {
+            dis_x = 1;
+            dis_y = 0;
+        }else if (direction == '1')
+        {
+            dis_x = 1;
+            dis_y = -1;
+        }  
+        int next_x = hero_x + dis_x;
+        int next_y = hero_y + dis_y;
+        int damage = 5;
+        int range = 5;
+        if (map[next_x][next_y].what_kind_of_cell != '_' && map[next_x][next_y].what_kind_of_cell != '|' &&
+        direction <= '9' && direction >= '1' && direction != '5')
+        {
+            for (int i = 0; i < range; i++)
+            {
+                if (where_are_enemies[next_x][next_y])
+                {
+                    hit_enemy(5,next_x,next_y);
+                    
+                }else if (map[next_x][next_y].what_kind_of_cell == '_' || map[next_x][next_y].what_kind_of_cell == '|')
+                {
+                    map[next_x-dis_x][next_y-dis_y].lost_weapons[3] ++;
+                    break;
+                }
+                
+                next_x += dis_x;
+                next_y += dis_y;
+                
+           }
+        }
+    }else if (selected_weapon == 4)// sword
+    {
+        int hit = 0;
+        for (int i = -1; i < 2; i++)
+        {
+            for (int j = -1; j < 2; j++)
+            {
+                if (j == 0 && i == 0)
+                {
+                    continue;
+                }
+                if (where_are_enemies[hero_x + i][hero_y + j])
+                {
+                    hit_enemy(10,hero_x+i,hero_y+j);
+                    hit ++;
+                }
+                
+            }
+            
+        }
+        
+        if (hit == 0)
+        {
+            message = 29;
+        }
+    }
+    
+    
+    
+    
+    
+    
+}
 
 //-----------------------------------------------------------------move
 int is_move_allowed(int direction){
@@ -1636,9 +2001,9 @@ int is_move_allowed(int direction){
     }
     if (map[next_x][next_y].what_kind_of_cell == '+' || map[next_x][next_y].what_kind_of_cell == '.'
     || map[next_x][next_y].what_kind_of_cell == '#' || map[next_x][next_y].what_kind_of_cell == '/' 
-    || map[next_x][next_y].what_kind_of_cell == 'G' || map[next_x][next_y].what_kind_of_cell == '='
+    || map[next_x][next_y].what_kind_of_cell == 'g' || map[next_x][next_y].what_kind_of_cell == '='
     || map[next_x][next_y].what_kind_of_cell == 'T' || map[next_x][next_y].what_kind_of_cell == '?'
-    || map[next_x][next_y].what_kind_of_cell == 'F')
+    || map[next_x][next_y].what_kind_of_cell == 'f')
     {
         return 1;
     }
@@ -1762,6 +2127,7 @@ void tester_print(){
     {
         mvprintw(0,85,"WEAPON: NOTHING");
     }
+    mvprintw(0,120,"HEALTH: %d" , health/10);
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
 }
 
@@ -2034,7 +2400,12 @@ void hunger_and_health_menu(){
 //----------------------------------------------------------------------time
 void passage_time(){
     game_times[0] ++;
-    hunger_level -= 4;
+    if (hunger_level > 0)
+    {
+        hunger_level -= 4;
+    }
+    
+    
     if (hunger_level <= MAX_HUNGER / 4)
     {
         health -= 4;
