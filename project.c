@@ -25,6 +25,13 @@
 #define MAX_HEALTH 1000
 #define MAX_HUNGER 1000
 #define ENEMY_DAMAGE 40 //undead damage
+#define MAX_TREASURE_WIDTH 20
+#define MAX_TREASURE_LENTGH 90
+#define MIN_TREASURE_WIDTH 10
+#define MIN_TREASURE_LENTGH 50
+#define MIN_TREASURE_ENEMIES 25
+#define MAX_TREASURE_ENEMIES 50
+#define TRAP_DAMAGE 30
 
 
 //------------------------------structs
@@ -98,6 +105,9 @@ char excellent_foods[5][20] = {"Ghormeh Sabzi","Lobster Thermidor","Caviar","Ste
 Enemy monsters[100];
 int all_enemies = 1;
 int where_are_enemies[MAP_WIDTH][MAP_LENTGH] = {0};
+int where_are_traps[MAP_WIDTH][MAP_LENTGH] = {0};
+int score = 0;
+int treasure_enemies = 1;
 
 
 //------------------------------functions
@@ -129,7 +139,9 @@ void hunger_and_health_menu();
 void use_spell(int spell);
 void passage_time();
 void double_move(int direction);
+void kill_enemy();
 void attack();
+void treasure_room();
 
 
 
@@ -149,12 +161,23 @@ int main(){
     
     clear();
     game_times[0] = SPELL_TIME * 3;
-    for (int i = 1; i < 5; i++)
+    for (int i = 1; i < 6; i++)
     {
         initialize_map();
         random_map_generate();
+        if (i == 5)
+        {
+            initialize_map();
+            treasure_room();
+        }
+        
         discover_room(0);
         clear();
+        if (health <= 0)
+        {
+            break;
+        }
+        
         if (show_all_map)
         {
             tester_print();
@@ -257,12 +280,18 @@ int main(){
             }
 
             //stairs
-            if (under_hero_kind == '/' && under_hero_color == 7)
+            if (under_hero_kind == '/' && (under_hero_color == 7 || under_hero_color == 11))
             {
                 int go_to_next_floor = getch();
                 if (go_to_next_floor == 'y'){
                     which_floor++;
                     message = 0;
+                    if (under_hero_color == 11)
+                    {
+                        message = 30;
+                    }
+                    score += 111;
+                    
                     break;
                 }
                 
@@ -323,6 +352,7 @@ int main(){
                     spells[under_hero_color-13] ++;
                     under_hero_kind = '.';
                     under_hero_color = 0;
+                    score += 17;
                 }else{
                     message = 10;
                 }
@@ -357,7 +387,7 @@ int main(){
                     }
                     under_hero_color = 0;
                     under_hero_kind = '.';
-                    
+                    score += 11;
                 }else{
                     message = 17;
                 }
@@ -410,6 +440,24 @@ int main(){
                 }
             }
             
+            if (where_are_traps[hero_x][hero_y])
+            {
+                where_are_traps[hero_x][hero_y] = 0;
+                message = 31;
+                health -= TRAP_DAMAGE;
+                under_hero_color = 2;
+            }
+            
+
+            if (health <= 0)
+            {
+                break;
+            }
+            if (which_floor == 4 && treasure_enemies == 0)
+            {
+                break;
+            }
+            
             
             
             
@@ -418,7 +466,25 @@ int main(){
             
         }
     }
-    
+    clear();
+    score += gold * 31;
+    if (health < 0)
+    {
+        attron(COLOR_PAIR(2));
+        attron(A_BOLD);
+        mvprintw(7,30,"You died!");
+        attroff(COLOR_PAIR(2));
+        attroff(A_BOLD);
+        mvprintw(10,25,"score: %d gold: %d" , score,gold);
+    }else{
+        attron(COLOR_PAIR(3));
+        attron(A_BOLD);
+        mvprintw(7,30,"Victory!");
+        attroff(COLOR_PAIR(3));
+        attroff(A_BOLD);
+        mvprintw(10,25,"score: %d gold: %d" , score , gold);
+    }
+    getch();
         
     
     // tester_print();
@@ -1155,6 +1221,8 @@ void initialize_map(){
             map[i][j].what_kind_of_cell = ' ';
             map[i][j].discover = 0;
             map[i][j].color = 0;
+            where_are_enemies[i][j] = 0;
+            where_are_traps[i][j] = 0;
             for (int t = 0; t < 5; t++)
             {
                 map[i][j].lost_weapons[t] = 0;
@@ -1209,6 +1277,7 @@ void print_map(){
     mvprintw(0,120,"HEALTH: %d" , health/10);
     
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
+    mvprintw(MAP_WIDTH+2 , 50,"floor: %d" , which_floor);
 }
 
 //-------------------------------------------------------------random map generation
@@ -1275,6 +1344,26 @@ void room_generator(int i){
     rooms[i].theme = 1;
 }
 
+void treasure_generator(int i){
+    while (1)
+    {
+        rooms[0].length  = MIN_TREASURE_LENTGH + rand() % (MAX_TREASURE_LENTGH - MIN_TREASURE_LENTGH);
+        rooms[0].width  = MIN_TREASURE_WIDTH + rand() % (MAX_TREASURE_WIDTH - MIN_TREASURE_WIDTH);
+        rooms[0].x = 5 + rand() % (MAP_WIDTH - rooms[0].width);
+        rooms[0].y = rand() % (MAP_LENTGH - rooms[0].length);
+        int w = 1;
+        if (rooms[i].x+rooms[i].width >= MAP_WIDTH || rooms[i].y + rooms[i].length >= MAP_LENTGH)
+        {
+            w = 0;
+        }
+        
+        if (w)
+        {
+            break;
+        }  
+    }
+    rooms[i].theme = 1;
+}
 int find_closest_room(int room_index) {
     int min_distance_squared = 100000;
     int closest_room = -1;
@@ -1513,7 +1602,18 @@ void random_map_generate(){
         }
     }
     
-
+    //-----------------trap
+    int num_of_traps;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_traps = (rand() % (3)); // no matter what is difficulty
+        for (int j = 0; j < num_of_traps; j++)
+        {
+            int trap_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int trap_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
+            where_are_traps[trap_x][trap_y] = 1;
+        }
+    }
     //-----------------enemy
     int num_of_enemies;
     for (int i = 0; i < num_rooms; i++)
@@ -1584,6 +1684,11 @@ void random_map_generate(){
     y_stairs = rooms[num_rooms-1].y + 1 + rand()%(rooms[num_rooms-1].length - 2);
     map[x_stairs][y_stairs].what_kind_of_cell = '/';
     map[x_stairs][y_stairs].color = 7;
+    if (which_floor == 4)
+    {
+        map[x_stairs][y_stairs].color = 11;
+    }
+    
 
     //------------------------------------window
     int window_room = rand() % num_rooms;
@@ -1608,6 +1713,128 @@ void random_map_generate(){
     
 }
 
+void treasure_room(){
+    treasure_generator(0);
+    for (int j = rooms[0].x;j <= rooms[0].x+rooms[0].width ; j ++)
+    {
+        for (int t = rooms[0].y ; t <= rooms[0].y + rooms[0].length; t ++)
+        {
+            map[j][t].what_kind_of_cell = '.';
+            map[j][t].discover = 0;
+        }
+            // mvprintw(j,1,"%d" , j); 
+    }
+    for (int j = rooms[0].x; j <= rooms[0].x+rooms[0].width; j++)
+    {
+        map[j][rooms[0].y].what_kind_of_cell = '|';
+        map[j][rooms[0].y].color = 6;
+        map[j][rooms[0].y+rooms[0].length].what_kind_of_cell = '|';
+        map[j][rooms[0].y+rooms[0].length].color = 6;
+            
+    }
+    for (int j = rooms[0].y; j <= rooms[0].y+rooms[0].length; j++)
+    {
+        map[rooms[0].x][j].what_kind_of_cell = '_';
+        map[rooms[0].x][j].color = 6;
+        map[rooms[0].x + rooms[0].width][j].what_kind_of_cell = '_';
+        map[rooms[0].x + rooms[0].width][j].color = 6;
+    }
+        
+    //----------------------------gold
+    int num_of_golds;
+    num_of_golds = rand() % (10 + difficulty);
+    for (int j = 0; j < num_of_golds; j++)
+    {
+        int gold_x = rooms[0].x + 1 + rand()%(rooms[0].width-2);
+        int gold_y = rooms[0].y + 1 + rand()%(rooms[0].length - 2);
+        map[gold_x][gold_y].what_kind_of_cell = 'g';
+        map[gold_x][gold_y].color = 9;
+        int black_gold = rand()%10;
+        if (black_gold == 1)
+        {
+            map[gold_x][gold_y].color = 11;
+        }
+        
+    }
+        
+    //-----------------trap
+    int num_of_traps;
+    for (int i = 0; i < num_rooms; i++)
+    {
+        num_of_traps = (rand() % 20); // no matter what is difficulty
+        for (int j = 0; j < num_of_traps; j++)
+        {
+            int trap_x = rooms[i].x + 1 + rand()%(rooms[i].width-2);
+            int trap_y = rooms[i].y + 1 + rand()%(rooms[i].length - 2);
+            where_are_traps[trap_x][trap_y] = 1;
+        }
+    }
+    
+    
+    
+
+    
+    //-----------------enemy
+    int num_of_enemies = MIN_TREASURE_ENEMIES + rand() % (MAX_TREASURE_ENEMIES - MIN_TREASURE_ENEMIES); // no matter what is difficulty
+    treasure_enemies = num_of_enemies;
+    for (int j = 0; j < num_of_enemies; j++)
+    {
+        int enemy_x = rooms[0].x + 1 + rand()%(rooms[0].width-2);
+        int enemy_y = rooms[0].y + 1 + rand()%(rooms[0].length - 2);
+        map[enemy_x][enemy_y].color = 23;
+        monsters[all_enemies].x = enemy_x;
+        monsters[all_enemies].y = enemy_y;
+        int kind_of_enemy = rand() % 5;
+        monsters[all_enemies].kind = kind_of_enemy;
+        if (where_are_enemies[enemy_x][enemy_y])
+        {
+            treasure_enemies --;
+        }
+        
+        where_are_enemies[enemy_x][enemy_y] = all_enemies;
+        if (kind_of_enemy == 0)
+        {
+            map[enemy_x][enemy_y].what_kind_of_cell = 'D';
+            monsters[all_enemies].helth = 5;
+            strcpy(monsters[all_enemies].name , "Demon");
+            monsters[all_enemies].damage = ENEMY_DAMAGE / 4;
+        }else if (kind_of_enemy == 1)
+        {
+            map[enemy_x][enemy_y].what_kind_of_cell = 'F';
+            monsters[all_enemies].helth = 10;
+            strcpy(monsters[all_enemies].name , "Fire Breathing Monster");
+            monsters[all_enemies].damage = ENEMY_DAMAGE / 2;
+        }else if (kind_of_enemy == 2)
+        {
+            map[enemy_x][enemy_y].what_kind_of_cell = 'G';
+            monsters[all_enemies].helth = 15;
+            strcpy(monsters[all_enemies].name , "Giant");
+            monsters[all_enemies].damage = ENEMY_DAMAGE / 3;
+        }else if (kind_of_enemy == 3)
+        {
+            map[enemy_x][enemy_y].what_kind_of_cell = 'S';
+            monsters[all_enemies].helth = 20;
+            strcpy(monsters[all_enemies].name , "Snake");
+            monsters[all_enemies].damage = ENEMY_DAMAGE * 5 / 4;
+        }else if (kind_of_enemy == 4)
+        {
+            map[enemy_x][enemy_y].what_kind_of_cell = 'U';
+            monsters[all_enemies].helth = 30;
+            strcpy(monsters[all_enemies].name , "Undead");
+            monsters[all_enemies].damage = ENEMY_DAMAGE;
+        } 
+        all_enemies ++;
+    }
+
+    //-----------------hero
+    
+    hero_x = rooms[0].x + 1 + (rand()%(rooms[0].width -2));
+    hero_y = rooms[0].y + 1 + (rand()%(rooms[0].length -2));
+    map[hero_x][hero_y].what_kind_of_cell = '&';
+    map[hero_x][hero_y].color = color_of_main_character;
+
+
+}
 //----------------------------------------------------------------messages
 void set_messages(){
     strcpy(all_messages[0] , "You have entered a new floor.");
@@ -1640,6 +1867,8 @@ void set_messages(){
     strcpy(all_messages[27],"You have slain an enemy!");
     strcpy(all_messages[28],"You hit the enemy.");
     strcpy(all_messages[29],"You did not hit anything.");
+    strcpy(all_messages[30],"You have entered the treasure room. So close to victory!");
+    strcpy(all_messages[31],"You stepped on a trap.");
     
     
 }
@@ -1683,6 +1912,12 @@ void kill_enemy(int x , int y){
     message = 27;
     map[x][y].what_kind_of_cell = '.';
     map[x][y].color = 0;
+    if (which_floor == 4)
+    {
+        treasure_enemies --;
+    }
+    score += 11+ rand() % 20;
+    
 }
 
 void hit_enemy(int power , int x , int y){
@@ -2129,6 +2364,8 @@ void tester_print(){
     }
     mvprintw(0,120,"HEALTH: %d" , health/10);
     mvprintw(MAP_WIDTH + 2 , 0 ,"SPELLS H: %d S: %d D:%d" , spells[0] , spells[1],spells[2]);
+    mvprintw(MAP_WIDTH+2 , 50,"floor: %d" , which_floor);
+
 }
 
 void tester_discover(){
