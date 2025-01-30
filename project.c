@@ -58,21 +58,31 @@ typedef struct
     char name[30];
 }Enemy;
 
+typedef struct {
+    char username[20];
+    char password[100];
+    char email[100];
+    int gold;
+    int score;
+    int game_played;
+} User;
+
 
 //------------------------------variables
 int message = 0; 
 char all_messages[50][75];
-int num_users;
+int userCount;
 int resume_or_not = 0;
 Cell map[MAP_WIDTH][MAP_LENTGH];
 Room rooms[20];
+User users[100];
 int discoverd_rooms[9];
 int num_rooms;
 int color_of_main_character = 0; // 0:white  , 5:red , 10:blue
 int difficulty = 1; // 2: easy   , 1:medium , 0:hard
-char user_names[100][20];
-char passwords [100][100];
-char emails [100][100];
+// char user_names[100][20];
+// char passwords [100][100];
+// char emails [100][100];
 FILE *fptr;
 char user_name[50] = "";
 char password [31];
@@ -108,6 +118,8 @@ int where_are_enemies[MAP_WIDTH][MAP_LENTGH] = {0};
 int where_are_traps[MAP_WIDTH][MAP_LENTGH] = {0};
 int score = 0;
 int treasure_enemies = 1;
+int which_user = 0;
+int login_or_not = 0;
 
 
 //------------------------------functions
@@ -142,12 +154,16 @@ void double_move(int direction);
 void kill_enemy();
 void attack();
 void treasure_room();
+void read_users_from_file();
+void writeUsersToFile();
+void initialize_users();
 
 
 
 
 int main(){
-    get_informations();
+    read_users_from_file("user_info.txt",users);
+    initialize_users();
     set_messages();
     srand(time(NULL));
     initscr();
@@ -160,6 +176,7 @@ int main(){
     make_or_load_user();
     
     clear();
+    writeUsersToFile("user_info.txt",users);
     game_times[0] = SPELL_TIME * 3;
     for (int i = 1; i < 6; i++)
     {
@@ -484,8 +501,16 @@ int main(){
         attroff(A_BOLD);
         mvprintw(10,25,"score: %d gold: %d" , score , gold);
     }
+    mvprintw(15,25,"which user: %d" , which_user);
     getch();
-        
+    if (login_or_not)
+    {
+        users[which_user].game_played++;
+        users[which_user].score = score;
+        users[which_user].gold = gold;
+    }
+    
+    writeUsersToFile("user_info.txt",users);  
     
     // tester_print();
     // tester_discover();
@@ -534,36 +559,86 @@ void pair_colors(){
 }
 
 //------------------------------------------------------------------get informations
-void get_informations(){
-    num_users = 0;
-    fptr = fopen("user_names.txt","r");
-    while (fgets(user_names[num_users], 20, fptr)) {
-        user_names[num_users][strcspn(user_names[num_users], "\n")] = '\0';
-        size_t len = strlen(user_names[num_users]);
-        // user_names[num_users][len - 1] = '\0';
-        num_users++;
+// void get_informations(){
+//     userCount = 0;
+//     fptr = fopen("user_names.txt","r");
+//     while (fgets(user_names[num_users], 20, fptr)) {
+//         user_names[num_users][strcspn(user_names[num_users], "\n")] = '\0';
+//         size_t len = strlen(user_names[num_users]);
+//         // user_names[num_users][len - 1] = '\0';
+//         num_users++;
+//     }
+//     fclose(fptr);
+//     fptr = fopen("passwords.txt","r");
+//     int num_pass = 0;
+//     while (fgets(passwords[num_pass], 20, fptr)) {
+//         passwords[num_pass][strcspn(passwords[num_pass], "\n")] = '\0';
+//         size_t len = strlen(passwords[num_pass]);
+//         // user_names[num_users][len - 1] = '\0';
+//         num_pass++;
+//     }
+//     fclose(fptr);
+//     fptr = fopen("emails.txt","r");
+//     num_pass = 0;
+//     while (fgets(emails[num_pass], 20, fptr)) {
+//         emails[num_pass][strcspn(emails[num_pass], "\n")] = '\0';
+//         size_t len = strlen(emails[num_pass]);
+//         // user_names[num_users][len - 1] = '\0';
+//         num_pass++;
+//     }
+//     fclose(fptr);
+// }
+void initialize_users(){
+    for (int i = 0; i < 100; i++)
+    {
+        users[i].gold = 0;
+        users[i].score = 0;
+        users[i].game_played = 0;
     }
-    fclose(fptr);
-    fptr = fopen("passwords.txt","r");
-    int num_pass = 0;
-    while (fgets(passwords[num_pass], 20, fptr)) {
-        passwords[num_pass][strcspn(passwords[num_pass], "\n")] = '\0';
-        size_t len = strlen(passwords[num_pass]);
-        // user_names[num_users][len - 1] = '\0';
-        num_pass++;
-    }
-    fclose(fptr);
-    fptr = fopen("emails.txt","r");
-    num_pass = 0;
-    while (fgets(emails[num_pass], 20, fptr)) {
-        emails[num_pass][strcspn(emails[num_pass], "\n")] = '\0';
-        size_t len = strlen(emails[num_pass]);
-        // user_names[num_users][len - 1] = '\0';
-        num_pass++;
-    }
-    fclose(fptr);
+    
 }
 
+void read_users_from_file(const char *filename, User users[]) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+    userCount = 0;
+    while (userCount < 100 &&
+           fscanf(file, "%s %s %s %d %d %d", 
+                  users[userCount].username,
+                  users[userCount].password,
+                  users[userCount].email,
+                  &users[userCount].gold,
+                  &users[userCount].score,
+                  &users[userCount].game_played) == 6) {
+        (userCount)++;
+    }
+
+    fclose(file);
+}
+
+void writeUsersToFile(const char *filename, User users[]) {
+    FILE *file = fopen(filename, "w"); 
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+    for (int i = 0; i < userCount; i++) {
+        fprintf(file, "%s %s %s %d %d %d\n", 
+                users[i].username,
+                users[i].password,
+                users[i].email,
+                users[i].gold,
+                users[i].score,
+                users[i].game_played);
+    }
+
+    fclose(file);
+}
 //--------------------------------------------------------------------first page
 void which_page_to_go(int n){
     if (n == 0)
@@ -716,12 +791,12 @@ void create_user(){
         mvprintw(6,1,"user name: ");
         getstr(user_name);
         int user_name_exists = 0;
-        for (int i = 0; i < num_users; i++)
+        for (int i = 0; i < userCount; i++)
         {
             // mvprintw(10,10,"%s %ld" , user_name , strlen(user_name));
             // mvprintw(11,10,"%s %ld" , user_names[i] , strlen(user_names[i]));
             // getch();
-            if (strcmp(user_name,user_names[i]) == 0)
+            if (strcmp(user_name,users[i].username) == 0)
             {
                 attron(COLOR_PAIR(2));
                 mvprintw(7,1,"this user name already exists");
@@ -894,18 +969,14 @@ void create_user(){
         }
         
     }
-    fptr = fopen("user_names.txt" , "a");
-    fprintf(fptr, "%s\n" , user_name);
-    fclose(fptr);
-    fptr = fopen("passwords.txt" , "a");
-    fprintf(fptr, "%s\n" , password);
-    fclose(fptr);
-    fptr = fopen("emails.txt" , "a");
-    fprintf(fptr, "%s\n" , email);
-    fclose(fptr);
+    strcpy(users[userCount].username , user_name);
+    strcpy(users[userCount].password,password);
+    strcpy(users[userCount].email,email);
+    userCount ++;
     attron(COLOR_PAIR(3));
     mvprintw(15,1,"user created successfully!");
     attroff(COLOR_PAIR(3));
+    writeUsersToFile("user_info.txt",users);
     getch();
     make_or_load_user();// go to the next page
     
@@ -917,7 +988,6 @@ void create_user(){
 
 //-------------------------------------------------------------------------login
 void login(){
-    int which_user;
     while (1) // to enter user name
     {
         clear();
@@ -932,9 +1002,9 @@ void login(){
         }
         int is_user_name_exist = -1;
         
-        for (int i = 0; i < num_users; i++)
+        for (int i = 0; i < userCount; i++)
         {
-            if (strcmp(user_name,user_names[i]) == 0)
+            if (strcmp(user_name,users[i].username) == 0)
             {
                 is_user_name_exist = i;
                 break;
@@ -970,10 +1040,10 @@ void login(){
         {
             mvprintw(8,1,"enter you email: ");
             getstr(email);
-            if (strcmp(email , emails[which_user]) == 0)
+            if (strcmp(email , users[which_user].email) == 0)
             {
                 attron(COLOR_PAIR(3));
-                mvprintw(9,1,"it is your password: %s" , passwords[which_user]);
+                mvprintw(9,1,"it is your password: %s" , users[which_user].password);
                 attroff(COLOR_PAIR(3));
                 getch();
             }else{
@@ -983,7 +1053,7 @@ void login(){
                 getch();
             }
         }else{
-            if (strcmp(password,passwords[which_user]) == 0)
+            if (strcmp(password,users[which_user].password) == 0)
             {
                 attron(COLOR_PAIR(3));
                 mvprintw(8,1,"welcome to rogue(M.H.Shirazi version)");
@@ -999,6 +1069,11 @@ void login(){
             } 
         } 
     }
+    if (strcmp(user_name,"Y")!=0)
+    {
+        login_or_not = 1;
+    }
+    
     game_menu();
 }
 
