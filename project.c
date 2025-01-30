@@ -4,6 +4,7 @@
 #include<ncurses.h>
 #include<stdio.h>
 #include<stdlib.h>
+#include<signal.h>
 #include<string.h>
 #include<unistd.h>
 #include<time.h>
@@ -120,6 +121,9 @@ int score = 0;
 int treasure_enemies = 1;
 int which_user = 0;
 int login_or_not = 0;
+int music_pid = -1;
+int which_song = 0;
+int song_stop_or_play = 1;
 
 
 //------------------------------functions
@@ -157,6 +161,10 @@ void treasure_room();
 void read_users_from_file();
 void writeUsersToFile();
 void initialize_users();
+void sort_by_score();
+void play_music(const char *filename);
+void play_choosen_music();
+
 
 
 
@@ -178,6 +186,10 @@ int main(){
     clear();
     writeUsersToFile("user_info.txt",users);
     game_times[0] = SPELL_TIME * 3;
+    
+    play_choosen_music();
+    
+    
     for (int i = 1; i < 6; i++)
     {
         initialize_map();
@@ -251,8 +263,22 @@ int main(){
                 }else
                     message = 25;  
             }
+             
+            // stop and play again music
+            else if (direction == 'P')
+            {
+                if (song_stop_or_play)
+                {
+                    if (music_pid != -1) {
+                        kill(music_pid, SIGKILL);
+                        music_pid = -1;
+                    }
+                }else{
+                    play_choosen_music();
+                }
+                song_stop_or_play = 1 - song_stop_or_play;
+            }
             
-
             //attack enemies
             else if (direction == ' ')
             {
@@ -457,6 +483,24 @@ int main(){
                 }
             }
             
+            for (int i = -1; i < 2; i++)
+            {
+                for (int j = -1; j < 2; j++)
+                {
+                    if (j == i && i == 0)
+                    {
+                        continue;
+                    }
+                    if (where_are_enemies[hero_x+i][hero_y + j])
+                    {
+                        health -= monsters[where_are_enemies[hero_x+i][hero_y+j]].damage;
+                    }
+                                        
+                }
+                
+            }
+            
+
             if (where_are_traps[hero_x][hero_y])
             {
                 where_are_traps[hero_x][hero_y] = 0;
@@ -501,20 +545,20 @@ int main(){
         attroff(A_BOLD);
         mvprintw(10,25,"score: %d gold: %d" , score , gold);
     }
-    mvprintw(15,25,"which user: %d" , which_user);
+
     getch();
     if (login_or_not)
     {
-        users[which_user].game_played++;
-        users[which_user].score = score;
-        users[which_user].gold = gold;
+        users[which_user-1].game_played++;
+        users[which_user-1].score = score;
+        users[which_user-1].gold = gold;
     }
     
     writeUsersToFile("user_info.txt",users);  
     
     // tester_print();
     // tester_discover();
-    
+    kill(music_pid, SIGKILL);
     
     
     endwin();
@@ -532,6 +576,8 @@ void pair_colors(){
     init_color(107,902,851,459);
     init_color(108,1000,980,980);
     init_color(109,627,321,176);
+    init_color(110,612,612,612);
+    init_color(111,729,451,176);
     init_pair(0,COLOR_WHITE , COLOR_BLACK);
     init_pair(1,COLOR_BLACK,COLOR_WHITE); // to select something
     init_pair(2,COLOR_BLACK,COLOR_RED); // to alert
@@ -556,6 +602,8 @@ void pair_colors(){
     init_pair(21,COLOR_BLACK , COLOR_MAGENTA);
     init_pair(22,106,107);// food
     init_pair(23,108,109);// enemy
+    init_pair(24,COLOR_WHITE,110);//silver medal
+    init_pair(25,COLOR_BLACK,111);// bronze medal
 }
 
 //------------------------------------------------------------------get informations
@@ -1276,8 +1324,91 @@ void settings(){
         {
             break;
         }
+
     }
     color_of_main_character = 5  * which;
+    which = 0;
+    while (1)
+    {
+        clear();
+        int key;
+        attron(A_BOLD);
+        mvprintw(1,1,"SETTINGS");
+        attroff(A_BOLD);
+        if (difficulty == 0)
+        {
+            mvprintw(6,1,"difficulty level: easy");
+        }else if (difficulty == 1)
+        {
+            mvprintw(6,1,"difficulty level: medium");
+        }else if (difficulty == 2)
+        {
+            mvprintw(6,1,"difficulty level: hard");
+        }
+        
+        if (color_of_main_character == 0)
+        {
+            mvprintw(7,1,"main character color: white");
+        }else if (color_of_main_character == 1)
+        {
+            mvprintw(7,1,"main character color: red");
+        }else if (color_of_main_character == 1)
+        {
+            mvprintw(7,1,"main character color: blue");
+        }
+        
+        mvprintw(8,1,"music genre");
+        if (which == 0)
+        {
+            attron(COLOR_PAIR(1));
+            mvprintw(9,3,"nothing");
+            attroff(COLOR_PAIR(1));
+            mvprintw(10,3,"death");
+            mvprintw(11,3,"deep");
+            mvprintw(12,3,"viking");
+        }else if (which == 1)
+        {
+            mvprintw(9,3,"nothing");
+            attron(COLOR_PAIR(1));
+            mvprintw(10,3,"death");
+            attroff(COLOR_PAIR(1));
+            mvprintw(11,3,"deep");
+            mvprintw(12,3,"viking");
+        }else if (which == 2)
+        {
+            mvprintw(9,3,"nothing");
+            mvprintw(10,3,"death");
+            attron(COLOR_PAIR(1));
+            mvprintw(11,3,"deep");
+            attroff(COLOR_PAIR(1));
+            mvprintw(12,3,"viking");
+        }else if (which == 3)
+        {
+            mvprintw(9,3,"nothing");
+            mvprintw(10,3,"death");
+            mvprintw(11,3,"deep");
+            attron(COLOR_PAIR(1));
+            mvprintw(12,3,"viking");
+            attroff(COLOR_PAIR(1));
+        }
+        key = getch();
+        // mvprintw(14,1,"%c" , key);
+        if (key == KEY_UP && which > 0)
+        {
+            which--;
+
+        }else if (key == KEY_DOWN &&  which < 3)
+        {
+            which ++;
+            // mvprintw(15,1,"salam");
+        }else if (key == '\n')
+        {
+            break;
+        }
+        
+        
+    }
+    which_song = which;
     attron(COLOR_PAIR(3));
     mvprintw(15,1,"settings applied successfully");
     attroff(COLOR_PAIR(3));
@@ -2737,22 +2868,161 @@ void passage_time(){
     
 }
 
+
+//----------------------------------------------------------------------hall of heroes
+void sort_by_score(){
+    for (int i = 0; i < userCount - 1; i++)
+    {
+        for (int j = 0; j < userCount - i - 1; j++)
+        {
+            if (users[j].score<users[j+1].score)
+            {
+                User temp = users[j];
+                users[j] = users[j+1];
+                users[j+1] = temp;
+                if (which_user == j)
+                {
+                    which_user ++;
+                }else if (which_user == j+1)
+                {
+                    which_user --;
+                }
+                
+                
+            }   
+        } 
+    }
+}
+
+
+void Hall_of_Heroes(){
+    read_users_from_file("user_info.txt",users);
+    sort_by_score();
+    int which_page = 1; // 1 means first and 0 means second
+    while (1)
+    {
+        clear();
+        attron(A_BOLD);
+        mvprintw(1,1,"HALL OF HEROES");
+        attroff(A_BOLD);
+        mvprintw(3,20,"PLAYER");
+        mvprintw(3,40,"SCORE");
+        mvprintw(3,60,"GOLD");
+        mvprintw(3,80,"EXPERIENCE");
+        if (which_page)
+        {
+            attron(COLOR_PAIR(11));
+            mvprintw(4,1,"THE CHOOSEN ONE");
+            mvprintw(4,20,"%s",users[0].username);
+            mvprintw(4,40,"%d" , users[0].score);
+            mvprintw(4,60 , "%d" , users[0].gold);
+            mvprintw(4,80,"%d",users[0].game_played);
+            attroff(COLOR_PAIR(11));
+            attron(COLOR_PAIR(24));
+            mvprintw(5,1,"THE SHADOW");
+            mvprintw(5,20,"%s",users[1].username);
+            mvprintw(5,40,"%d" , users[1].score);
+            mvprintw(5,60 , "%d" , users[1].gold);
+            mvprintw(5,80,"%d",users[1].game_played);
+            attroff(COLOR_PAIR(24));
+            attron(COLOR_PAIR(25));
+            mvprintw(6,1,"THE LAST SAMURAI");
+            mvprintw(6,20,"%s",users[2].username);
+            mvprintw(6,40,"%d" , users[2].score);
+            mvprintw(6,60 , "%d" , users[2].gold);
+            mvprintw(6,80,"%d",users[2].game_played);
+            attroff(COLOR_PAIR(25));
+            for (int i = 3; i < 10; i++)
+            {
+                if (i == which_user)
+                {
+                    attron(A_BOLD);
+                    attron(A_ITALIC);
+                }
+                
+                attron(COLOR_PAIR(i % 2));
+                mvprintw(i+4,20,"%s",users[i].username);
+                mvprintw(i+4,40,"%d" , users[i].score);
+                mvprintw(i+4,60 , "%d" , users[i].gold);
+                mvprintw(i+4,80,"%d",users[i].game_played);
+                attroff(COLOR_PAIR(i % 2));
+                if (i == which_user)
+                {
+                    attroff(A_BOLD);
+                    attroff(A_ITALIC);
+                }
+                
+            }
+            
+        }else{
+            for (int i = 10; i < 20; i++)
+            {
+                if (i == which_user)
+                {
+                    attron(A_BOLD);
+                    attron(A_ITALIC);
+                }
+                
+                attron(COLOR_PAIR(i % 2));
+                mvprintw(i-6,20,"%s",users[i].username);
+                mvprintw(i-6,40,"%d" , users[i].score);
+                mvprintw(i-6,60 , "%d" , users[i].gold);
+                mvprintw(i-6,80,"%d",users[i].game_played);
+                attroff(COLOR_PAIR(i % 2));
+                if (i == which_user)
+                {
+                    attroff(A_BOLD);
+                    attroff(A_ITALIC);
+                }
+                
+            }
+        }
+        int next_or_not = getch();
+        if (next_or_not == ' ')
+        {
+            if (userCount > 10)
+            {
+                which_page = 1 - which_page;
+            }
+        }else{
+            break;
+        }
+        
+        
+    }
+    make_or_load_user();
+}
+
+//-------------------------------music
+
+void play_music(const char *filename) {
+    if (music_pid != -1) {
+        kill(music_pid, SIGKILL); 
+    }
+
+    music_pid = fork(); 
+    if (music_pid == 0) { 
+        execlp("mpg123", "mpg123", "-q", filename, NULL);
+        exit(0);
+    }
+}
+
+void play_choosen_music(){
+    if (which_song == 1)
+    {
+        play_music("01 TOOL - Vicarious.mp3");
+    }else if (which_song == 2)
+    {
+        play_music("05 Agalloch - Not Unlike The Waves.mp3");
+    }else if (which_song == 3)
+    {
+        play_music("08 Great Hall Awaits A Fallen Brother.mp3");
+    }
+}
+
 //------------------------------- not developed yet
 
-
-
-void create_game(){
-    clear();
-}
-
-void resume_game(){
-    printw("7");
-}
-
-
 void profile_menu(){
-    printw("3");
+    int salam = 1;
 }
-void Hall_of_Heroes(){
-    printw("4");
-}
+
