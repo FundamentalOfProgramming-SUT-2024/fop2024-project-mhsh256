@@ -1,0 +1,89 @@
+[33mcommit 3d1ce3d7c75a3b66e5fc976389415b19b384d471[m[33m ([m[1;36mHEAD[m[33m)[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Wed Jan 15 12:10:47 2025 +0330
+
+    add window
+
+[33mcommit 9fc919c4b7d29a412249412d91824e575dc61694[m[33m ([m[1;32mmaster[m[33m)[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Tue Jan 14 18:25:48 2025 +0330
+
+    add gold and fix message
+
+[33mcommit 79f4b8a290ae48b8e155910f6fd56232b30f190c[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Mon Jan 13 19:19:43 2025 +0330
+
+    add stairs
+
+[33mcommit 152d04fdf4588971f604cb042121cc07c9b6c252[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Mon Jan 13 18:01:41 2025 +0330
+
+    add fast travel and discover functions to move hero
+
+[33mcommit 2de35ac7f6d4f34de24951bbafa3565e7ab77e81[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Sun Jan 12 15:38:30 2025 +0330
+
+    add move_hero and discover_room
+
+[33mcommit 3d08f619701956b3f9cb64f7c663c9919f208be8[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Fri Jan 10 18:40:12 2025 +0330
+
+    fix generate path
+
+[33mcommit 8f6bc5865183d0efb9db2e2cae8839b1287264e4[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Fri Jan 10 17:25:38 2025 +0330
+
+    add generate_path (every path ends with last room)
+
+[33mcommit 0d0bbaa6e65feefc7468a3fd36be7d51688f1a23[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Mon Jan 6 16:48:39 2025 +0330
+
+    add room generator
+
+[33mcommit a0141d4cb44f783f94f4b70041b6079b6ecc3111[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Mon Jan 6 13:03:29 2025 +0330
+
+    add print map and initialize map
+
+[33mcommit 7555cc454648b21fba9f5028895859178a5eb73f[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Sat Jan 4 20:33:55 2025 +0330
+
+    add settings
+
+[33mcommit e83431c333840249fadb45720cfe155a9dd94379[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Sat Jan 4 18:43:16 2025 +0330
+
+    add game menu
+
+[33mcommit 204d989d753cf674bc2f58d296358ab9ab83db83[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Sat Jan 4 17:29:33 2025 +0330
+
+    add login
+
+[33mcommit 9b481065201bcfda4df7ac0bfc23261b24331442[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Sat Jan 4 16:52:29 2025 +0330
+
+    add get infomations fanction
+
+[33mcommit 7dee7e40b2df0df96a79940685e6e0e1ba7ef084[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Tue Dec 31 19:59:19 2024 +0330
+
+    add create new player page
+
+[33mcommit 0ebcaeb53649c9470f9e91e1a42c5ec91f02f89c[m
+Author: Mohammad Hossein Shirazi <m.h.shirazi256@gmail.com>
+Date:   Mon Dec 30 21:31:59 2024 +0330
+
+    add first page
