@@ -124,6 +124,7 @@ int login_or_not = 0;
 int music_pid = -1;
 int which_song = 0;
 int song_stop_or_play = 1;
+int in_treasure_room = 0;
 
 
 //------------------------------functions
@@ -198,6 +199,10 @@ int main(){
         {
             initialize_map();
             treasure_room();
+            in_treasure_room = 1;
+            // kill(music_pid, SIGKILL);
+            // music_pid = -1;
+            play_choosen_music();
         }
         
         discover_room(0);
@@ -2919,7 +2924,7 @@ void Hall_of_Heroes(){
             mvprintw(4,80,"%d",users[0].game_played);
             attroff(COLOR_PAIR(11));
             attron(COLOR_PAIR(24));
-            mvprintw(5,1,"THE SHADOW");
+            mvprintw(5,1,"THE SHADOW ");
             mvprintw(5,20,"%s",users[1].username);
             mvprintw(5,40,"%d" , users[1].score);
             mvprintw(5,60 , "%d" , users[1].gold);
@@ -3008,7 +3013,12 @@ void play_music(const char *filename) {
 }
 
 void play_choosen_music(){
-    if (which_song == 1)
+    if (in_treasure_room)
+    {
+        play_music("Alestorm - Shipwrecked.mp3");
+    }
+    
+    else if (which_song == 1)
     {
         play_music("01 TOOL - Vicarious.mp3");
     }else if (which_song == 2)
